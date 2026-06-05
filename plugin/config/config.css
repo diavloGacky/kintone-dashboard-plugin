@@ -92,55 +92,133 @@ body {
   color: #c62828;
 }
 
-/* ウィジェット一覧 */
+/* セクション説明 */
+.section-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+/* ウィジェットカード一覧 */
 .widget-list {
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  min-height: 80px;
-  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  min-height: 100px;
+  padding: 4px 0;
   margin-bottom: 12px;
 }
 
 .empty-message {
   color: #999;
   text-align: center;
-  padding: 20px;
+  padding: 32px;
+  grid-column: 1 / -1;
+  font-size: 13px;
 }
 
-.widget-item {
+/* ウィジェットカード */
+.widget-card {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 0;
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.widget-card:hover {
+  border-color: #0066cc;
+  box-shadow: 0 4px 14px rgba(0,102,204,0.18);
+}
+
+.widget-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+}
+
+.widget-card.drag-over {
+  border-color: #0066cc;
+  border-style: dashed;
+  background: #f0f4ff;
+}
+
+/* カードのカラーバー（上部） */
+.widget-card-bar {
+  height: 5px;
+  background: linear-gradient(90deg, #0066cc, #4da6ff);
+}
+
+.widget-card-bar.type-number_card { background: linear-gradient(90deg, #0066cc, #4da6ff); }
+.widget-card-bar.type-table       { background: linear-gradient(90deg, #2d7a3a, #6abf77); }
+.widget-card-bar.type-bar_chart   { background: linear-gradient(90deg, #e67e22, #f5b76d); }
+.widget-card-bar.type-pie_chart   { background: linear-gradient(90deg, #8e44ad, #c39bd3); }
+.widget-card-bar.type-filter      { background: linear-gradient(90deg, #555, #aaa); }
+
+/* カード本体 */
+.widget-card-body {
+  padding: 14px 14px 12px;
+}
+
+.widget-card-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  margin-bottom: 8px;
-  background: #fafafa;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.widget-item .widget-icon {
-  font-size: 20px;
-  width: 32px;
-  text-align: center;
+.widget-card-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.widget-item .widget-info {
-  flex: 1;
-}
+.widget-card-info { flex: 1; min-width: 0; }
 
-.widget-item .widget-name {
+.widget-card-name {
   font-weight: bold;
+  font-size: 14px;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.widget-item .widget-type {
-  font-size: 12px;
-  color: #666;
+.widget-card-type {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #e8f0fe;
+  color: #0066cc;
+  margin-top: 4px;
+  font-weight: 500;
 }
 
-.widget-item .widget-actions {
+.widget-card-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
 }
+
+/* ドラッグハンドル */
+.drag-handle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #ccc;
+  font-size: 16px;
+  cursor: grab;
+  line-height: 1;
+}
+.widget-card:hover .drag-handle { color: #0066cc; }
 
 /* ボタン */
 .btn {

@@ -143,36 +143,81 @@
     if (current) sel.value = current;
   }
 
-  // ---- ウィジェット一覧を描画 ----
+  // ---- ウィジェットカード一覧を描画（ドラッグ＆ドロップ対応） ----
+  var dragSrcIndex = -1;
+
   function renderWidgetList() {
     var listEl = document.getElementById('widget-list');
+    listEl.innerHTML = '';
+
     if (widgets.length === 0) {
-      listEl.innerHTML = '<p class="empty-message">ウィジェットがまだ追加されていません</p>';
+      listEl.innerHTML = '<p class="empty-message">ウィジェットがまだ追加されていません<br>下の「＋ ウィジェットを追加」ボタンで追加してください</p>';
       return;
     }
-    listEl.innerHTML = '';
+
     widgets.forEach(function(w, i) {
       var typeInfo = WIDGET_TYPES[w.type] || { label: w.type, icon: '❓' };
-      var item = document.createElement('div');
-      item.className = 'widget-item';
-      item.innerHTML =
-        '<span class="widget-icon">' + typeInfo.icon + '</span>' +
-        '<div class="widget-info">' +
-          '<div class="widget-name">' + escapeHtml(w.title || '（タイトルなし）') + '</div>' +
-          '<div class="widget-type">' + typeInfo.label + '</div>' +
-        '</div>' +
-        '<div class="widget-actions">' +
-          '<button class="btn btn-secondary btn-small" data-action="edit" data-index="' + i + '">編集</button>' +
-          '<button class="btn btn-danger btn-small" data-action="delete" data-index="' + i + '">削除</button>' +
+      var card = document.createElement('div');
+      card.className = 'widget-card';
+      card.draggable = true;
+      card.dataset.index = String(i);
+      card.innerHTML =
+        '<div class="widget-card-bar type-' + w.type + '"></div>' +
+        '<div class="widget-card-body">' +
+          '<span class="drag-handle">⠿</span>' +
+          '<div class="widget-card-header">' +
+            '<span class="widget-card-icon">' + typeInfo.icon + '</span>' +
+            '<div class="widget-card-info">' +
+              '<div class="widget-card-name">' + escapeHtml(w.title || '（タイトルなし）') + '</div>' +
+              '<span class="widget-card-type">' + typeInfo.label + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="widget-card-actions">' +
+            '<button class="btn btn-secondary btn-small" data-action="edit" data-index="' + i + '">編集</button>' +
+            '<button class="btn btn-danger btn-small" data-action="delete" data-index="' + i + '">削除</button>' +
+          '</div>' +
         '</div>';
-      listEl.appendChild(item);
-    });
 
-    listEl.querySelectorAll('[data-action="edit"]').forEach(function(btn) {
-      btn.addEventListener('click', function() { openEditModal(parseInt(btn.dataset.index)); });
-    });
-    listEl.querySelectorAll('[data-action="delete"]').forEach(function(btn) {
-      btn.addEventListener('click', function() { deleteWidget(parseInt(btn.dataset.index)); });
+      // ドラッグ＆ドロップイベント
+      card.addEventListener('dragstart', function(e) {
+        dragSrcIndex = i;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', function() {
+        card.classList.remove('dragging');
+        listEl.querySelectorAll('.widget-card').forEach(function(c) { c.classList.remove('drag-over'); });
+      });
+      card.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (i !== dragSrcIndex) card.classList.add('drag-over');
+      });
+      card.addEventListener('dragleave', function() {
+        card.classList.remove('drag-over');
+      });
+      card.addEventListener('drop', function(e) {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        if (dragSrcIndex === -1 || dragSrcIndex === i) return;
+        // 配列を並び替えて再描画
+        var moved = widgets.splice(dragSrcIndex, 1)[0];
+        widgets.splice(i, 0, moved);
+        dragSrcIndex = -1;
+        renderWidgetList();
+      });
+
+      // 編集・削除ボタン
+      card.querySelector('[data-action="edit"]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditModal(i);
+      });
+      card.querySelector('[data-action="delete"]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        deleteWidget(i);
+      });
+
+      listEl.appendChild(card);
     });
   }
 
