@@ -75,7 +75,7 @@
     gridObj = GridStack.init({
       column:      12,
       cellHeight:  80,
-      handle:      '.widget-header',
+      handle:      '.widget-header, .widget-drag-handle',
       draggable:   { enabled: false },
       resizable:   { enabled: false },
       staticGrid:  true
@@ -231,8 +231,10 @@
       itemEl.setAttribute('gs-w',  layout.w);
       itemEl.setAttribute('gs-h',  layout.h);
       itemEl.setAttribute('gs-id', String(i));
+      var needsDragHandle = (w.type === 'text_box' || w.type === 'shape');
       itemEl.innerHTML =
         '<div class="grid-stack-item-content">' +
+          (needsDragHandle ? '<div class="widget-drag-handle">⠿</div>' : '') +
           renderWidgetHeader(w) +
           '<div class="widget-body" id="widget-body-' + i + '"></div>' +
         '</div>';
@@ -315,9 +317,10 @@
     // ヘッダー
     var thead = document.createElement('thead');
     var tr = document.createElement('tr');
+    var labels = widget.fieldLabels || {};
     fields.forEach(function(code) {
       var th = document.createElement('th');
-      th.textContent = code;
+      th.textContent = labels[code] || code;
       tr.appendChild(th);
     });
     thead.appendChild(tr); table.appendChild(thead);
@@ -339,34 +342,33 @@
 
   // ---- テキストボックス ----
   function renderTextBox(widget, body) {
-    body.style.cssText = 'display:block;overflow:auto;padding:0;';
-    var d = document.createElement('div');
-    d.style.cssText = [
-      'width:100%', 'height:100%', 'padding:12px',
+    body.style.cssText = [
+      'display:block', 'overflow:auto', 'padding:12px',
       'font-size:' + (widget.fontSize || 14) + 'px',
       'color:' + (widget.textColor || '#333'),
       'background:' + (widget.bgColor || 'transparent'),
       'text-align:' + (widget.textAlign || 'left'),
-      widget.bold ? 'font-weight:bold' : '',
+      widget.bold ? 'font-weight:bold' : 'font-weight:normal',
       'line-height:1.7', 'white-space:pre-wrap', 'word-break:break-word'
-    ].filter(Boolean).join(';');
-    d.textContent = widget.content || '';
-    body.appendChild(d);
+    ].join(';');
+    body.textContent = widget.content || '';
   }
 
   // ---- 図形 ----
   function renderShape(widget, body) {
-    body.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;';
+    var isLine = widget.shapeType === 'line';
+    body.style.cssText = isLine
+      ? 'display:flex;align-items:center;justify-content:center;padding:0;width:100%;height:100%;'
+      : 'display:block;padding:0;width:100%;height:100%;';
     var d = document.createElement('div');
     var r = widget.shapeType === 'circle' ? '50%'
-          : widget.shapeType === 'line'   ? '0'
+          : isLine ? '0'
           : (widget.borderRadius || 0) + 'px';
-    var h = widget.shapeType === 'line' ? (widget.lineHeight || 4) + 'px' : '100%';
     d.style.cssText = [
-      'width:100%', 'height:' + h,
+      'width:100%',
+      'height:' + (isLine ? (widget.lineHeight || 4) + 'px' : '100%'),
       'background:' + (widget.fillColor || '#0066cc'),
       'border-radius:' + r,
-      'border:' + (widget.borderWidth || 0) + 'px solid ' + (widget.borderColor || 'transparent'),
       'opacity:' + (widget.opacity !== undefined ? widget.opacity : 1)
     ].join(';');
     body.appendChild(d);

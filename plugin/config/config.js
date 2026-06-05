@@ -384,8 +384,8 @@
     var w = widgets.find(function(x) { return x.id === id; });
     if (!w) return;
 
-    // 選択ハイライト
-    document.querySelectorAll('.grid-stack-item-content').forEach(function(el) {
+    // 選択ハイライト（全ウィジェット種別のコンテナを対象）
+    document.querySelectorAll('.grid-stack-item-content, .tb-widget-content, .shape-widget-content').forEach(function(el) {
       el.classList.remove('selected');
     });
     var wc = document.getElementById('wc-' + id);
@@ -481,8 +481,11 @@
         w.unit        = getVal('p-nc-unit');
         break;
       case 'table':
-        w.fields = [];
-        document.querySelectorAll('#p-table-fields input:checked').forEach(function(c) { w.fields.push(c.value); });
+        w.fields = []; w.fieldLabels = {};
+        document.querySelectorAll('#p-table-fields input:checked').forEach(function(c) {
+          w.fields.push(c.value);
+          w.fieldLabels[c.value] = c.dataset.label || c.value;
+        });
         w.limit = parseInt(getVal('p-table-limit')) || 20;
         break;
       case 'bar_chart':
@@ -590,8 +593,8 @@
     if (!w.fields || !w.fields.length) {
       body.innerHTML = '<div class="wp-placeholder">フィールドを選択してください</div>'; return;
     }
-    var labels = {};
-    fieldCache.forEach(function(f) { labels[f.code] = f.label; });
+    var labels = w.fieldLabels || {};
+    fieldCache.forEach(function(f) { labels[f.code] = labels[f.code] || f.label; });
     var tbl   = document.createElement('table'); tbl.className = 'db-table';
     var thead = document.createElement('thead'); var tr = document.createElement('tr');
     w.fields.forEach(function(code) {
@@ -721,6 +724,7 @@
         var lbl = document.createElement('label');
         var chk = document.createElement('input');
         chk.type = 'checkbox'; chk.value = f.code;
+        chk.dataset.label = f.label;
         chk.checked = checked.indexOf(f.code) !== -1;
         lbl.appendChild(chk);
         lbl.appendChild(document.createTextNode(' ' + f.label));
