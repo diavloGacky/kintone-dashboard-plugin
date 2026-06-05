@@ -1,0 +1,34 @@
+{
+  "manifest_version": 1,
+  "version": 1,
+  "type": "APP",
+  "name": {
+    "ja": "ダッシュボードプラグイン",
+    "en": "Dashboard Plugin"
+  },
+  "description": {
+    "ja": "kintoneアプリをノーコードでダッシュボード化できるプラグイン",
+    "en": "A plugin that turns your kintone app into a dashboard without coding"
+  },
+  "icon": "image/icon.png",
+  "desktop": {
+    "js": [
+      "lib/gridstack.js",
+      "lib/chart.min.js",
+      "desktop/desktop.js"
+    ],
+    "css": [
+      "lib/gridstack.css",
+      "desktop/desktop.css"
+    ]
+  },
+  "config": {
+    "html": "config/config.html",
+    "js": [
+      "config/config.js"
+    ],
+    "css": [
+      "config/config.css"
+    ]
+  }
+}

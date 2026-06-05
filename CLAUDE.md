@@ -149,3 +149,50 @@ kintone-dashboard-plugin/
 ### 変更したファイル
 ### 動作確認方法
 ### 次に行う候補
+
+---
+
+## ⚠️ 現在の開発状況（2026-06-04時点）
+
+### 方式変更：プラグイン → JavaScriptカスタマイズ
+kintoneプラグイン（zip）のインストールがGAIA_PL05エラーで失敗したため、
+**kintone JavaScriptカスタマイズ方式**に切り替えて実装済み。
+
+### 実際のファイル構成
+```
+kintone-dashboard-plugin/
+├── customization/
+│   ├── js/dashboard.js      ★ メインロジック（編集対象）
+│   └── css/dashboard.css    ★ スタイル（編集対象）
+├── plugin/lib/
+│   ├── chart.min.js         # Chart.js 4.4.4
+│   ├── gridstack.js         # gridstack.js 10.3.1
+│   └── gridstack.css
+├── scripts/
+│   └── bundle.ps1           ★ バンドル生成スクリプト
+└── dist/
+    └── dashboard.bundle.js  ★ 配布物（これ1ファイルをkintoneにアップロード）
+```
+
+### バンドル生成コマンド
+```powershell
+.\scripts\bundle.ps1
+```
+→ dist/dashboard.bundle.js が生成される（約330KB）
+
+### 完成している機能
+- [x] 数値カード・テーブル・棒グラフ・円グラフ
+- [x] フィルタ（日付範囲・ドロップダウン・テキスト）
+- [x] ドラッグ＆ドロップ配置・レイアウト保存
+- [x] ノーコード設定パネル（⚙ 設定）
+- [x] 特定ビューのみ表示
+- [x] kintoneレコードへの設定共有保存（実装済み・未テスト）
+
+### 次にやること
+- [ ] 設定共有機能の実機テスト（設定保存用kintoneアプリが必要）
+- [ ] UI改善・デザイン調整
+- [ ] ランキングウィジェット追加
+
+### 設定共有機能の前提
+kintoneに「設定保存用アプリ」を作成する必要がある。
+フィールドコード: `source_app_id`（文字列1行）、`dashboard_config`（文字列複数行）

@@ -1,0 +1,21 @@
+﻿{
+  "manifest_version": 1,
+  "version": 1,
+  "type": "APP",
+  "name": {
+    "ja": "テストプラグイン",
+    "en": "Test Plugin"
+  },
+  "description": {
+    "ja": "インストールテスト用",
+    "en": "For installation test"
+  },
+  "icon": "image/icon.png",
+  "desktop": {
+    "js": ["desktop/desktop.js"]
+  },
+  "config": {
+    "html": "config/config.html",
+    "js": ["config/config.js"]
+  }
+}

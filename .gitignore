@@ -1,0 +1,9 @@
+# Plugin private keys - NEVER commit
+*.ppk
+
+# Build artifacts
+dist/*.zip
+
+# Windows
+Thumbs.db
+desktop.ini

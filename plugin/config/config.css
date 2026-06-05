@@ -1,0 +1,263 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Meiryo, sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #f5f5f5;
+  padding: 20px;
+}
+
+#plugin-config {
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.config-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #0066cc;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #0066cc;
+}
+
+.config-section {
+  margin-bottom: 32px;
+}
+
+.config-section h3 {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 4px solid #0066cc;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-row label {
+  min-width: 160px;
+  font-weight: 500;
+}
+
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 2px rgba(0,102,204,0.2);
+}
+
+.required {
+  color: #cc0000;
+}
+
+.status-message {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  min-height: 20px;
+}
+
+.status-message.success {
+  background: #e6f4ea;
+  color: #2d7a3a;
+}
+
+.status-message.error {
+  background: #fce8e6;
+  color: #c62828;
+}
+
+/* ウィジェット一覧 */
+.widget-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  min-height: 80px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.empty-message {
+  color: #999;
+  text-align: center;
+  padding: 20px;
+}
+
+.widget-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: #fafafa;
+}
+
+.widget-item .widget-icon {
+  font-size: 20px;
+  width: 32px;
+  text-align: center;
+}
+
+.widget-item .widget-info {
+  flex: 1;
+}
+
+.widget-item .widget-name {
+  font-weight: bold;
+}
+
+.widget-item .widget-type {
+  font-size: 12px;
+  color: #666;
+}
+
+.widget-item .widget-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ボタン */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn-primary {
+  background: #0066cc;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.btn-danger {
+  background: #cc0000;
+  color: #fff;
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.btn-large {
+  padding: 12px 32px;
+  font-size: 16px;
+}
+
+/* モーダル */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  width: 560px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #0066cc;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.widget-config {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.widget-config.hidden {
+  display: none;
+}
+
+/* チェックボックスリスト */
+.checkbox-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: unset;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+/* フッター */
+.config-footer {
+  display: flex;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 2px solid #e0e0e0;
+  margin-top: 24px;
+}

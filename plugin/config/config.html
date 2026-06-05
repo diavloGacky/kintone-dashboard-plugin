@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボードプラグイン 設定</title>
+</head>
+<body>
+  <div id="plugin-config">
+    <h2 class="config-title">ダッシュボードプラグイン 設定</h2>
+
+    <!-- API設定 -->
+    <section class="config-section">
+      <h3>API設定</h3>
+      <div class="form-row">
+        <label for="api-token">APIトークン <span class="required">*</span></label>
+        <input type="text" id="api-token" placeholder="kintone APIトークンを入力してください">
+      </div>
+      <div class="form-row">
+        <label for="app-id">対象アプリID <span class="required">*</span></label>
+        <input type="number" id="app-id" placeholder="例: 1" min="1">
+        <button id="load-fields-btn" class="btn btn-secondary">フィールド読み込み</button>
+      </div>
+      <div id="field-load-status" class="status-message"></div>
+    </section>
+
+    <!-- ウィジェット一覧 -->
+    <section class="config-section">
+      <h3>ウィジェット一覧</h3>
+      <div id="widget-list" class="widget-list">
+        <p class="empty-message">ウィジェットがまだ追加されていません</p>
+      </div>
+      <button id="add-widget-btn" class="btn btn-primary">＋ ウィジェットを追加</button>
+    </section>
+
+    <!-- ウィジェット追加モーダル -->
+    <div id="widget-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="modal-title">ウィジェットを追加</h3>
+
+        <div class="form-row">
+          <label for="widget-type">ウィジェット種別</label>
+          <select id="widget-type">
+            <option value="number_card">数値カード</option>
+            <option value="table">テーブル</option>
+            <option value="bar_chart">棒グラフ</option>
+            <option value="pie_chart">円グラフ</option>
+            <option value="filter">フィルタ</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="widget-title">タイトル</label>
+          <input type="text" id="widget-title" placeholder="ウィジェットのタイトル">
+        </div>
+
+        <!-- 数値カード設定 -->
+        <div id="config-number_card" class="widget-config">
+          <div class="form-row">
+            <label for="nc-field">集計フィールド</label>
+            <select id="nc-field"><option value="">フィールドを選択</option></select>
+          </div>
+          <div class="form-row">
+            <label for="nc-agg">集計方法</label>
+            <select id="nc-agg">
+              <option value="COUNT">件数 (COUNT)</option>
+              <option value="SUM">合計 (SUM)</option>
+              <option value="AVG">平均 (AVG)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="nc-unit">単位</label>
+            <input type="text" id="nc-unit" placeholder="例: 件、円">
+          </div>
+        </div>
+
+        <!-- テーブル設定 -->
+        <div id="config-table" class="widget-config hidden">
+          <div class="form-row">
+            <label>表示フィールド（複数選択可）</label>
+            <div id="table-fields" class="checkbox-list"></div>
+          </div>
+          <div class="form-row">
+            <label for="table-limit">最大表示件数</label>
+            <input type="number" id="table-limit" value="20" min="1" max="500">
+          </div>
+        </div>
+
+        <!-- 棒グラフ設定 -->
+        <div id="config-bar_chart" class="widget-config hidden">
+          <div class="form-row">
+            <label for="bar-x">X軸フィールド（文字列）</label>
+            <select id="bar-x"><option value="">フィールドを選択</option></select>
+          </div>
+          <div class="form-row">
+            <label for="bar-y">Y軸フィールド（数値）</label>
+            <select id="bar-y"><option value="">フィールドを選択</option></select>
+          </div>
+          <div class="form-row">
+            <label for="bar-agg">集計方法</label>
+            <select id="bar-agg">
+              <option value="SUM">合計 (SUM)</option>
+              <option value="COUNT">件数 (COUNT)</option>
+              <option value="AVG">平均 (AVG)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 円グラフ設定 -->
+        <div id="config-pie_chart" class="widget-config hidden">
+          <div class="form-row">
+            <label for="pie-label">分類フィールド</label>
+            <select id="pie-label"><option value="">フィールドを選択</option></select>
+          </div>
+          <div class="form-row">
+            <label for="pie-value">数値フィールド</label>
+            <select id="pie-value"><option value="">フィールドを選択</option></select>
+          </div>
+          <div class="form-row">
+            <label for="pie-agg">集計方法</label>
+            <select id="pie-agg">
+              <option value="SUM">合計 (SUM)</option>
+              <option value="COUNT">件数 (COUNT)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- フィルタ設定 -->
+        <div id="config-filter" class="widget-config hidden">
+          <div class="form-row">
+            <label for="filter-type">フィルタ種別</label>
+            <select id="filter-type">
+              <option value="date_range">日付範囲</option>
+              <option value="dropdown">ドロップダウン</option>
+              <option value="text">テキスト</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="filter-field">対象フィールド</label>
+            <select id="filter-field"><option value="">フィールドを選択</option></select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="modal-save-btn" class="btn btn-primary">保存</button>
+          <button id="modal-cancel-btn" class="btn btn-secondary">キャンセル</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 保存ボタン -->
+    <div class="config-footer">
+      <button id="save-btn" class="btn btn-primary btn-large">設定を保存</button>
+      <button id="cancel-btn" class="btn btn-secondary btn-large">キャンセル</button>
+    </div>
+  </div>
+
+</body>
+</html>
