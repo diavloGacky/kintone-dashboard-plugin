@@ -254,9 +254,10 @@
   }
 
   function renderWidgetHeader(w) {
+    if (w.type === 'text_box' || w.type === 'shape') return '';
     var TYPES = {
       number_card: '数値カード', table: 'テーブル',
-      bar_chart: '棒グラフ', pie_chart: '円グラフ'
+      bar_chart: '棒グラフ', pie_chart: '円グラフ', filter: 'フィルタ'
     };
     return '<div class="widget-header">' +
       escapeHtml(w.title || '') +

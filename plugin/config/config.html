@@ -66,12 +66,18 @@
         </div>
       </div>
       <div class="palette-sep"></div>
+      <div class="palette-title" style="margin-top:4px">図形</div>
+      <div class="palette-hint">ドラッグして配置</div>
+      <div id="shape-palette" class="shape-palette"></div>
+
+      <div class="palette-sep"></div>
       <div class="palette-tip">
         <p>💡 <b>操作方法</b></p>
-        <p>・クリック → キャンバスに追加</p>
+        <p>・ウィジェット: クリックで追加</p>
+        <p>・図形: ドラッグで配置</p>
         <p>・ヘッダーをドラッグ → 移動</p>
         <p>・右下をドラッグ → リサイズ</p>
-        <p>・ウィジェットをクリック → 設定</p>
+        <p>・クリック → 設定を開く</p>
       </div>
     </aside>
 
@@ -184,12 +190,11 @@
           </div>
         </div>
 
-        <!-- テキストボックス -->
+        <!-- テキストボックス（タイトルなし・内容はキャンバスで直接入力） -->
         <div class="prop-section" id="ps-text_box">
-          <div class="prop-row">
-            <label>テキスト内容</label>
-            <textarea id="p-tb-content" rows="4" placeholder="表示するテキストを入力"></textarea>
-          </div>
+          <p style="font-size:11px;color:#888;margin-bottom:10px">
+            テキストはキャンバス上で直接入力できます。
+          </p>
           <div class="prop-row">
             <label>文字サイズ</label>
             <select id="p-tb-size">
@@ -228,39 +233,8 @@
         <!-- 図形 -->
         <div class="prop-section" id="ps-shape">
           <div class="prop-row">
-            <label>図形の種類</label>
-            <select id="p-sh-type">
-              <option value="rectangle">四角形</option>
-              <option value="circle">円</option>
-              <option value="line">ライン</option>
-            </select>
-          </div>
-          <div class="prop-row">
             <label>塗りつぶし色</label>
             <input type="color" id="p-sh-fill" value="#0066cc">
-          </div>
-          <div class="prop-row">
-            <label>枠線の色</label>
-            <input type="color" id="p-sh-border" value="#0066cc">
-          </div>
-          <div class="prop-row">
-            <label>枠線の太さ</label>
-            <select id="p-sh-bwidth">
-              <option value="0">なし</option>
-              <option value="1">細 (1px)</option>
-              <option value="2">標準 (2px)</option>
-              <option value="4">太 (4px)</option>
-            </select>
-          </div>
-          <div class="prop-row">
-            <label>角丸（四角形）</label>
-            <select id="p-sh-radius">
-              <option value="0">なし</option>
-              <option value="4">小 (4px)</option>
-              <option value="8">中 (8px)</option>
-              <option value="16">大 (16px)</option>
-              <option value="999">最大</option>
-            </select>
           </div>
           <div class="prop-row">
             <label>透明度</label>
@@ -270,6 +244,16 @@
               <option value="0.6">60%</option>
               <option value="0.4">40%</option>
               <option value="0.2">20%</option>
+            </select>
+          </div>
+          <div class="prop-row" id="ps-sh-radius-row">
+            <label>角丸</label>
+            <select id="p-sh-radius">
+              <option value="0">なし</option>
+              <option value="4">小 (4px)</option>
+              <option value="8">中 (8px)</option>
+              <option value="16">大 (16px)</option>
+              <option value="999">最大（楕円）</option>
             </select>
           </div>
         </div>

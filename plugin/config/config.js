@@ -3,6 +3,19 @@
 
   var PLUGIN_ID = kintone.$PLUGIN_ID;
 
+  var PRESET_SHAPES = [
+    { label: '青い四角',   shapeType: 'rectangle', fillColor: '#0066cc', borderRadius: 0,   opacity: 1   },
+    { label: '赤い四角',   shapeType: 'rectangle', fillColor: '#cc0000', borderRadius: 0,   opacity: 1   },
+    { label: '緑の四角',   shapeType: 'rectangle', fillColor: '#2d7a3a', borderRadius: 0,   opacity: 1   },
+    { label: '橙の四角',   shapeType: 'rectangle', fillColor: '#e67e22', borderRadius: 0,   opacity: 1   },
+    { label: '角丸（青）', shapeType: 'rectangle', fillColor: '#0066cc', borderRadius: 12,  opacity: 1   },
+    { label: '角丸（グレー）', shapeType: 'rectangle', fillColor: '#888888', borderRadius: 12, opacity: 0.3 },
+    { label: '青い円',     shapeType: 'circle',    fillColor: '#0066cc', borderRadius: 999, opacity: 1   },
+    { label: '赤い円',     shapeType: 'circle',    fillColor: '#cc0000', borderRadius: 999, opacity: 1   },
+    { label: '区切り線',   shapeType: 'line',      fillColor: '#cccccc', borderRadius: 0,   opacity: 1,  lineHeight: 2 },
+    { label: '太い区切り', shapeType: 'line',      fillColor: '#0066cc', borderRadius: 0,   opacity: 1,  lineHeight: 4 }
+  ];
+
   var WIDGET_TYPES = {
     number_card: { label: '数値カード', icon: '🔢' },
     table:       { label: 'テーブル',   icon: '📋' },
@@ -99,12 +112,104 @@
     });
 
     // プロパティパネル：変更時にリアルタイム更新
-    ['p-title','p-nc-agg','p-nc-unit','p-bar-agg','p-pie-agg','p-filter-type'].forEach(function(id) {
+    ['p-title','p-nc-agg','p-nc-unit','p-bar-agg','p-pie-agg','p-filter-type',
+     'p-tb-size','p-tb-color','p-tb-bgcolor','p-tb-align','p-tb-bold',
+     'p-sh-fill','p-sh-opacity','p-sh-radius'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('change', applyProps);
     });
-    var titleEl = document.getElementById('p-title');
-    if (titleEl) titleEl.addEventListener('input', applyProps);
+    ['p-title'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', applyProps);
+    });
+
+    // 図形パレット構築
+    buildShapePalette();
+
+    // キャンバスへのドロップ
+    var canvas = document.getElementById('cfg-canvas');
+    canvas.addEventListener('dragover', function(e) {
+      if (e.dataTransfer.types.indexOf('shapeindex') !== -1) {
+        e.preventDefault();
+        canvas.classList.add('drag-over');
+      }
+    });
+    canvas.addEventListener('dragleave', function(e) {
+      if (!canvas.contains(e.relatedTarget)) canvas.classList.remove('drag-over');
+    });
+    canvas.addEventListener('drop', function(e) {
+      canvas.classList.remove('drag-over');
+      var idx = e.dataTransfer.getData('shapeindex');
+      if (idx === '' || idx === null) return;
+      e.preventDefault();
+      var preset = PRESET_SHAPES[parseInt(idx)];
+      if (!preset) return;
+      var pos = getGridPos(e);
+      addShapeFromPreset(preset, pos.x, pos.y);
+    });
+  }
+
+  function buildShapePalette() {
+    var pal = document.getElementById('shape-palette');
+    if (!pal) return;
+    pal.innerHTML = '';
+    PRESET_SHAPES.forEach(function(s, i) {
+      var thumb = document.createElement('div');
+      thumb.className = 'shape-thumb' + (s.shapeType === 'line' ? ' line-thumb' : '');
+      thumb.title = s.label;
+      thumb.draggable = true;
+      var r = s.shapeType === 'circle' ? '50%'
+            : s.shapeType === 'line'   ? '0'
+            : (s.borderRadius || 0) + 'px';
+      var h = s.shapeType === 'line' ? (s.lineHeight || 2) + 'px' : '100%';
+      thumb.style.cssText = [
+        'background:' + s.fillColor,
+        'border-radius:' + r,
+        'opacity:' + (s.opacity || 1)
+      ].join(';');
+      if (s.shapeType === 'line') {
+        var inner = document.createElement('div');
+        inner.style.cssText = 'width:90%;height:' + h + ';background:' + s.fillColor + ';border-radius:0;';
+        thumb.style.background = 'transparent';
+        thumb.style.opacity = '1';
+        thumb.appendChild(inner);
+      }
+      thumb.addEventListener('dragstart', function(e) {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('shapeindex', String(i));
+      });
+      pal.appendChild(thumb);
+    });
+  }
+
+  function getGridPos(dropEvent) {
+    var gridEl = document.getElementById('cfg-grid');
+    var canvasEl = document.getElementById('cfg-canvas');
+    var rect = gridEl.getBoundingClientRect();
+    var relX = dropEvent.clientX - rect.left;
+    var relY = dropEvent.clientY - rect.top + canvasEl.scrollTop;
+    return {
+      x: Math.max(0, Math.min(10, Math.floor(relX / (rect.width / 12)))),
+      y: Math.max(0, Math.floor(relY / 80))
+    };
+  }
+
+  function addShapeFromPreset(preset, gx, gy) {
+    widgetCount++;
+    var id = 'w' + widgetCount;
+    var w = {
+      id: id, type: 'shape', title: preset.label,
+      shapeType:    preset.shapeType,
+      fillColor:    preset.fillColor,
+      borderRadius: preset.borderRadius || 0,
+      borderWidth:  0,
+      opacity:      preset.opacity !== undefined ? preset.opacity : 1,
+      lineHeight:   preset.lineHeight || 4,
+      layout: { x: gx, y: gy, w: 4, h: preset.shapeType === 'line' ? 1 : 3 }
+    };
+    widgets.push(w);
+    addWidgetToCanvas(w, true);
+    hideEmpty();
   }
 
   // ================================================================
@@ -186,7 +291,6 @@
   }
 
   function addWidgetToCanvas(w, focus) {
-    var info   = WIDGET_TYPES[w.type] || { label: w.type, icon: '❓' };
     var layout = w.layout || { x: 0, y: 0, w: 6, h: 4 };
 
     var el = document.createElement('div');
@@ -196,38 +300,79 @@
     el.setAttribute('gs-y',  layout.y);
     el.setAttribute('gs-w',  layout.w);
     el.setAttribute('gs-h',  layout.h);
-    el.innerHTML =
-      '<div class="grid-stack-item-content" id="wc-' + w.id + '">' +
-        '<div class="wp-header">' +
-          '<span class="wp-badge">' + info.icon + '</span>' +
-          '<span class="wp-title" id="wt-' + w.id + '">' + escHtml(w.title) + '</span>' +
-          '<button class="wp-del" data-id="' + w.id + '" title="削除">✕</button>' +
-        '</div>' +
-        '<div class="wp-body" id="wb-' + w.id + '">' +
-          '<div class="wp-placeholder">設定してプレビューを表示</div>' +
-        '</div>' +
+
+    if (w.type === 'text_box') {
+      // テキストボックス：ヘッダーなし・インライン直接編集
+      el.innerHTML =
+        '<div class="tb-widget-content" id="wc-' + w.id + '">' +
+          '<div class="tb-inline-editor" id="wb-' + w.id + '" contenteditable="true">' +
+            escHtml(w.content || '') +
+          '</div>' +
+          '<button class="tb-style-btn" title="スタイル設定">⚙ スタイル</button>' +
+        '</div>';
+    } else if (w.type === 'shape') {
+      // 図形：ヘッダーなし・シェイプのみ
+      el.innerHTML = '<div class="shape-widget-content" id="wc-' + w.id + '">' +
+        '<div id="wb-' + w.id + '" style="width:100%;height:100%"></div>' +
+        '<button class="shape-del-btn" title="削除">✕</button>' +
       '</div>';
+    } else {
+      // 通常ウィジェット：ヘッダーあり
+      var info = WIDGET_TYPES[w.type] || { label: w.type, icon: '❓' };
+      el.innerHTML =
+        '<div class="grid-stack-item-content" id="wc-' + w.id + '">' +
+          '<div class="wp-header">' +
+            '<span class="wp-badge">' + info.icon + '</span>' +
+            '<span class="wp-title" id="wt-' + w.id + '">' + escHtml(w.title) + '</span>' +
+            '<button class="wp-del" data-id="' + w.id + '" title="削除">✕</button>' +
+          '</div>' +
+          '<div class="wp-body" id="wb-' + w.id + '">' +
+            '<div class="wp-placeholder">設定してプレビューを表示</div>' +
+          '</div>' +
+        '</div>';
+    }
 
     var grid = document.getElementById('cfg-grid');
     grid.appendChild(el);
     gridObj.makeWidget(el);
 
-    // クリックで選択
-    el.querySelector('.grid-stack-item-content').addEventListener('click', function(e) {
-      if (e.target.closest('.wp-del')) return;
-      selectWidget(w.id);
-    });
-
-    // 削除ボタン
-    el.querySelector('.wp-del').addEventListener('click', function(e) {
-      e.stopPropagation();
-      removeWidget(w.id);
-    });
-
-    if (focus) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // イベント設定
+    if (w.type === 'text_box') {
+      var editor = el.querySelector('.tb-inline-editor');
+      editor.addEventListener('input', function() {
+        w.content = editor.innerText;
+      });
+      editor.addEventListener('click', function(e) { e.stopPropagation(); });
+      el.querySelector('.tb-style-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectWidget(w.id);
+      });
+      el.querySelector('.tb-widget-content').addEventListener('click', function(e) {
+        if (e.target.closest('.tb-inline-editor')) return;
+        if (e.target.closest('.tb-style-btn')) return;
+        editor.focus();
+      });
+    } else if (w.type === 'shape') {
+      el.querySelector('.shape-widget-content').addEventListener('click', function(e) {
+        if (e.target.closest('.shape-del-btn')) return;
+        selectWidget(w.id);
+      });
+      el.querySelector('.shape-del-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        removeWidget(w.id);
+      });
+    } else {
+      el.querySelector('.grid-stack-item-content').addEventListener('click', function(e) {
+        if (e.target.closest('.wp-del')) return;
+        selectWidget(w.id);
+      });
+      el.querySelector('.wp-del').addEventListener('click', function(e) {
+        e.stopPropagation();
+        removeWidget(w.id);
+      });
     }
 
+    if (focus) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     renderWidgetPreview(w);
   }
 
@@ -253,8 +398,12 @@
     var info = WIDGET_TYPES[w.type] || { label: w.type, icon: '❓' };
     document.getElementById('props-title-label').textContent = info.icon + ' ' + info.label + '設定';
 
-    // フォームに現在値をセット
-    setVal('p-title', w.title || '');
+    // タイトル行：text_box・shapeは非表示
+    var titleRow = document.querySelector('.prop-row:has(#p-title)') ||
+                   document.getElementById('p-title') && document.getElementById('p-title').closest('.prop-row');
+    if (titleRow) titleRow.style.display = (w.type === 'text_box' || w.type === 'shape') ? 'none' : '';
+    if (w.type !== 'text_box' && w.type !== 'shape') setVal('p-title', w.title || '');
+
     document.querySelectorAll('.prop-section').forEach(function(s) { s.classList.remove('active'); });
     var sec = document.getElementById('ps-' + w.type);
     if (sec) sec.classList.add('active');
@@ -351,21 +500,19 @@
         w.field      = getVal('p-filter-field');
         break;
       case 'text_box':
-        var tbEl = document.getElementById('p-tb-content');
-        w.content   = tbEl ? tbEl.value : '';
-        w.fontSize  = parseInt(getVal('p-tb-size'))  || 14;
-        w.textColor = getVal('p-tb-color')  || '#333333';
+        w.fontSize  = parseInt(getVal('p-tb-size'))   || 14;
+        w.textColor = getVal('p-tb-color')   || '#333333';
         w.bgColor   = getVal('p-tb-bgcolor') || '#ffffff';
-        w.textAlign = getVal('p-tb-align')  || 'left';
+        w.textAlign = getVal('p-tb-align')   || 'left';
         w.bold      = getVal('p-tb-bold') === '1';
-        break;
+        // インラインエディタにスタイルを適用
+        applyTextBoxStyles(w, document.getElementById('wb-' + w.id));
+        return; // renderWidgetPreviewはスキップ
+
       case 'shape':
-        w.shapeType    = getVal('p-sh-type');
         w.fillColor    = getVal('p-sh-fill');
-        w.borderColor  = getVal('p-sh-border');
-        w.borderWidth  = parseInt(getVal('p-sh-bwidth'))  || 0;
         w.borderRadius = parseInt(getVal('p-sh-radius'))  || 0;
-        w.opacity      = parseFloat(getVal('p-sh-opacity'));
+        w.opacity      = parseFloat(getVal('p-sh-opacity')) || 1;
         break;
     }
     renderWidgetPreview(w);
@@ -398,7 +545,13 @@
     var body = document.getElementById('wb-' + w.id);
     if (!body) return;
 
-    if (records.length === 0) {
+    // text_box はcontenteditable管理のためスタイルのみ適用
+    if (w.type === 'text_box') { applyTextBoxStyles(w, body); return; }
+    // shape はデータ不要
+    if (w.type === 'shape') { renderPreviewShape(w, body); return; }
+
+    var needsData = ['number_card','table','bar_chart','pie_chart'].indexOf(w.type) !== -1;
+    if (needsData && records.length === 0) {
       body.innerHTML = '<div class="wp-placeholder">データ読み込み後に表示されます</div>';
       return;
     }
@@ -409,9 +562,7 @@
         case 'table':       renderPreviewTable(w, body);   break;
         case 'bar_chart':   renderPreviewBar(w, body);     break;
         case 'pie_chart':   renderPreviewPie(w, body);     break;
-        case 'filter':      renderPreviewFilter(w, body);   break;
-      case 'text_box':    renderPreviewTextBox(w, body);  break;
-      case 'shape':       renderPreviewShape(w, body);    break;
+        case 'filter':      renderPreviewFilter(w, body);  break;
         default: body.innerHTML = '<div class="wp-placeholder">未対応</div>';
       }
     } catch(e) {
@@ -504,34 +655,35 @@
     });
   }
 
-  function renderPreviewTextBox(w, body) {
-    body.style.cssText = 'display:block;overflow:auto;padding:0;';
-    var d = document.createElement('div');
-    d.style.cssText = [
-      'width:100%', 'height:100%', 'padding:12px',
+  function applyTextBoxStyles(w, editor) {
+    if (!editor) return;
+    editor.style.cssText = [
+      'flex:1', 'padding:12px', 'outline:none',
       'font-size:' + (w.fontSize || 14) + 'px',
-      'color:' + (w.textColor || '#333'),
+      'color:' + (w.textColor || '#333333'),
       'background:' + (w.bgColor || 'transparent'),
       'text-align:' + (w.textAlign || 'left'),
-      w.bold ? 'font-weight:bold' : '',
-      'line-height:1.7', 'white-space:pre-wrap', 'word-break:break-word'
-    ].filter(Boolean).join(';');
-    d.textContent = w.content || '（テキスト未入力）';
-    body.appendChild(d);
+      w.bold ? 'font-weight:bold' : 'font-weight:normal',
+      'line-height:1.7', 'white-space:pre-wrap',
+      'word-break:break-word', 'overflow:auto'
+    ].join(';');
   }
 
   function renderPreviewShape(w, body) {
-    body.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;';
-    var d = document.createElement('div');
+    body.innerHTML = '';
     var r = w.shapeType === 'circle' ? '50%'
           : w.shapeType === 'line'   ? '0'
           : (w.borderRadius || 0) + 'px';
-    var h = w.shapeType === 'line' ? (w.lineHeight || 4) + 'px' : '100%';
+    var isLine = w.shapeType === 'line';
+    body.style.cssText = isLine
+      ? 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;'
+      : 'width:100%;height:100%;padding:0;';
+    var d = document.createElement('div');
     d.style.cssText = [
-      'width:100%', 'height:' + h,
+      'width:100%',
+      'height:' + (isLine ? (w.lineHeight || 4) + 'px' : '100%'),
       'background:' + (w.fillColor || '#0066cc'),
       'border-radius:' + r,
-      'border:' + (w.borderWidth || 0) + 'px solid ' + (w.borderColor || 'transparent'),
       'opacity:' + (w.opacity !== undefined ? w.opacity : 1)
     ].join(';');
     body.appendChild(d);
