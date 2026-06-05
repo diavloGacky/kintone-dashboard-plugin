@@ -79,7 +79,7 @@
     gridObj = GridStack.init({
       column:     12,
       cellHeight: 80,
-      handle:     '.wp-header',
+      handle:     '.wp-header, .widget-drag-handle',
       margin:     8
     }, '#cfg-grid');
 
@@ -302,17 +302,17 @@
     el.setAttribute('gs-h',  layout.h);
 
     if (w.type === 'text_box') {
-      // テキストボックス：ヘッダーなし・インライン直接編集
       el.innerHTML =
         '<div class="tb-widget-content" id="wc-' + w.id + '">' +
+          '<div class="widget-drag-handle">⠿ ドラッグで移動</div>' +
           '<div class="tb-inline-editor" id="wb-' + w.id + '" contenteditable="true">' +
             escHtml(w.content || '') +
           '</div>' +
-          '<button class="tb-style-btn" title="スタイル設定">⚙ スタイル</button>' +
+          '<button class="tb-style-btn" title="スタイル設定">⚙</button>' +
         '</div>';
     } else if (w.type === 'shape') {
-      // 図形：ヘッダーなし・シェイプのみ
       el.innerHTML = '<div class="shape-widget-content" id="wc-' + w.id + '">' +
+        '<div class="widget-drag-handle">⠿</div>' +
         '<div id="wb-' + w.id + '" style="width:100%;height:100%"></div>' +
         '<button class="shape-del-btn" title="削除">✕</button>' +
       '</div>';
@@ -373,6 +373,13 @@
     }
 
     if (focus) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // showTitle=falseの場合はヘッダーを非表示
+    if (w.showTitle === false) {
+      var hdr = el.querySelector('.wp-header');
+      if (hdr) hdr.style.display = 'none';
+    }
+
     renderWidgetPreview(w);
   }
 
@@ -398,11 +405,17 @@
     var info = WIDGET_TYPES[w.type] || { label: w.type, icon: '❓' };
     document.getElementById('props-title-label').textContent = info.icon + ' ' + info.label + '設定';
 
-    // タイトル行：text_box・shapeは非表示
-    var titleRow = document.querySelector('.prop-row:has(#p-title)') ||
-                   document.getElementById('p-title') && document.getElementById('p-title').closest('.prop-row');
-    if (titleRow) titleRow.style.display = (w.type === 'text_box' || w.type === 'shape') ? 'none' : '';
-    if (w.type !== 'text_box' && w.type !== 'shape') setVal('p-title', w.title || '');
+    // タイトル行・showTitle行：text_box・shapeは非表示
+    var isDecoration = (w.type === 'text_box' || w.type === 'shape');
+    var titleEl = document.getElementById('p-title');
+    var titleRow = titleEl ? titleEl.closest('.prop-row') : null;
+    var showTitleRow = document.getElementById('p-show-title-row');
+    if (titleRow)     titleRow.style.display     = isDecoration ? 'none' : '';
+    if (showTitleRow) showTitleRow.style.display  = isDecoration ? 'none' : '';
+    if (!isDecoration) {
+      setVal('p-title', w.title || '');
+      setVal('p-show-title', w.showTitle === false ? '0' : '1');
+    }
 
     document.querySelectorAll('.prop-section').forEach(function(s) { s.classList.remove('active'); });
     var sec = document.getElementById('ps-' + w.type);
@@ -470,9 +483,16 @@
     var w = widgets.find(function(x) { return x.id === selectedId; });
     if (!w) return;
 
-    w.title = getVal('p-title') || WIDGET_TYPES[w.type].label;
-    var titleEl = document.getElementById('wt-' + selectedId);
-    if (titleEl) titleEl.textContent = w.title;
+    var isDecoration = (w.type === 'text_box' || w.type === 'shape');
+    if (!isDecoration) {
+      w.title     = getVal('p-title') || (WIDGET_TYPES[w.type] || {}).label || '';
+      w.showTitle = getVal('p-show-title') !== '0';
+      var titleEl = document.getElementById('wt-' + selectedId);
+      if (titleEl) {
+        titleEl.textContent = w.title;
+        titleEl.closest('.wp-header').style.display = w.showTitle ? '' : 'none';
+      }
+    }
 
     switch(w.type) {
       case 'number_card':

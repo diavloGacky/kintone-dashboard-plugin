@@ -78,6 +78,10 @@
   background: transparent;
 }
 
+/* 装飾ウィジェット（図形・テキスト）は通常ウィジェットの背面に */
+.grid-stack-item.is-decoration { z-index: 1; }
+.grid-stack-item:not(.is-decoration) { z-index: 2; }
+
 .grid-stack-item-content {
   background: #fff;
   border-radius: 8px;

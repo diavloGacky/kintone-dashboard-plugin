@@ -32,11 +32,17 @@
     buildDashboardDOM();
 
     // データ取得して描画
-    fetchAllRecords().then(function(recs) {
-      records = recs;
-      renderFilters();
-      renderAllWidgets();
-    });
+    fetchAllRecords()
+      .then(function(recs) {
+        records = recs;
+        renderFilters();
+        renderAllWidgets();
+      })
+      .catch(function(err) {
+        console.error('初期データ取得エラー', err);
+        var grid = document.getElementById('dashboard-grid');
+        if (grid) grid.innerHTML = '<div style="padding:24px;color:#cc0000;text-align:center">データの取得に失敗しました。APIトークンとアプリIDをご確認ください。</div>';
+      });
   });
 
   // ---- DOM構築 ----
@@ -231,10 +237,11 @@
       itemEl.setAttribute('gs-w',  layout.w);
       itemEl.setAttribute('gs-h',  layout.h);
       itemEl.setAttribute('gs-id', String(i));
-      var needsDragHandle = (w.type === 'text_box' || w.type === 'shape');
+      var isDecoration = (w.type === 'text_box' || w.type === 'shape');
+      if (isDecoration) itemEl.classList.add('is-decoration');
       itemEl.innerHTML =
         '<div class="grid-stack-item-content">' +
-          (needsDragHandle ? '<div class="widget-drag-handle">⠿</div>' : '') +
+          (isDecoration ? '<div class="widget-drag-handle">⠿</div>' : '') +
           renderWidgetHeader(w) +
           '<div class="widget-body" id="widget-body-' + i + '"></div>' +
         '</div>';
@@ -257,6 +264,7 @@
 
   function renderWidgetHeader(w) {
     if (w.type === 'text_box' || w.type === 'shape') return '';
+    if (w.showTitle === false) return '';
     var TYPES = {
       number_card: '数値カード', table: 'テーブル',
       bar_chart: '棒グラフ', pie_chart: '円グラフ', filter: 'フィルタ'
@@ -356,6 +364,7 @@
 
   // ---- 図形 ----
   function renderShape(widget, body) {
+    body.innerHTML = ''; // 読み込み中... をクリア
     var isLine = widget.shapeType === 'line';
     body.style.cssText = isLine
       ? 'display:flex;align-items:center;justify-content:center;padding:0;width:100%;height:100%;'
@@ -479,16 +488,24 @@
     kintone.plugin.app.setConfig({ settings: JSON.stringify(current) });
   }
 
-  // ---- 更新 ----
+  // ---- 更新（フィルタUIは再描画しない：入力値が消えるバグ防止） ----
   function refreshDashboard() {
-    fetchAllRecords().then(function(recs) {
-      records = recs;
-      renderFilters();
-      settings.widgets.forEach(function(w, i) {
-        if (w.type === 'filter') return;
-        renderWidgetContent(w, i, records);
+    fetchAllRecords()
+      .then(function(recs) {
+        records = recs;
+        settings.widgets.forEach(function(w, i) {
+          if (w.type === 'filter') return;
+          renderWidgetContent(w, i, records);
+        });
+      })
+      .catch(function(err) {
+        console.error('データ取得エラー', err);
+        settings.widgets.forEach(function(w, i) {
+          if (w.type === 'filter') return;
+          var body = document.getElementById('widget-body-' + i);
+          if (body) body.innerHTML = '<div class="widget-error">データ取得に失敗しました</div>';
+        });
       });
-    });
   }
 
   // ---- 集計ユーティリティ ----
