@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボードビルダー</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Meiryo, sans-serif;
+      font-size: 14px;
+      color: #333;
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    .app-header {
+      background: #0066cc;
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-header h1 { font-size: 18px; font-weight: bold; }
+    .app-header .sub { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+    .header-spacer { flex: 1; }
+    .header-status { font-size: 13px; font-weight: 500; }
+    .header-status.success { color: #90ee90; }
+    .header-status.error   { color: #ffaaaa; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-head {
+      padding: 12px 20px;
+      border-bottom: 1px solid #e8e8e8;
+      background: #f8f9ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 8px 8px 0 0;
+    }
+    .card-head h2 { font-size: 14px; font-weight: bold; color: #0066cc; }
+    .card-body { padding: 20px; }
+
+    .form-grid { display: grid; grid-template-columns: 150px 1fr; gap: 12px 16px; align-items: center; }
+    .form-grid label { font-weight: 500; font-size: 13px; }
+    .form-grid .span2 { grid-column: 1 / -1; }
+
+    input[type="text"], input[type="number"], input[type="password"], select, textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      background: #fff;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #0066cc;
+      box-shadow: 0 0 0 2px rgba(0,102,204,0.15);
+    }
+    .input-sfx { display: flex; align-items: stretch; }
+    .input-sfx input { border-radius: 4px 0 0 4px; }
+    .input-sfx .sfx {
+      padding: 7px 10px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-left: none;
+      border-radius: 0 4px 4px 0;
+      font-size: 13px;
+      color: #666;
+      white-space: nowrap;
+    }
+
+    .btn {
+      padding: 7px 16px; border: none; border-radius: 4px;
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s; white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.82; }
+    .btn-primary   { background: #0066cc; color: #fff; }
+    .btn-secondary { background: #e8e8e8; color: #333; }
+    .btn-success   { background: #2d7a3a; color: #fff; }
+    .btn-danger    { background: #cc0000; color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-lg { padding: 10px 28px; font-size: 15px; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+    .status-msg {
+      display: none; font-size: 12px; padding: 8px 12px;
+      border-radius: 4px; margin-top: 10px; line-height: 1.5;
+    }
+    .status-msg.show    { display: block; }
+    .status-msg.success { background: #e8f5e9; color: #2d7a3a; }
+    .status-msg.error   { background: #fff0f0; color: #cc0000; }
+    .status-msg.info    { background: #e8f0fe; color: #0066cc; }
+
+    .sec-title {
+      grid-column: 1 / -1;
+      font-size: 11px; font-weight: bold; color: #888;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding-bottom: 6px; border-bottom: 1px solid #eee;
+      margin-top: 6px;
+    }
+
+    /* ウィジェット一覧 */
+    .widget-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 14px; border: 1px solid #e0e0e0;
+      border-radius: 6px; margin-bottom: 8px; background: #fafafa;
+      transition: border-color 0.15s;
+    }
+    .widget-item:hover { border-color: #0066cc; }
+    .wi-icon { font-size: 20px; width: 28px; text-align: center; }
+    .wi-info { flex: 1; }
+    .wi-name { font-weight: bold; font-size: 13px; }
+    .wi-meta { font-size: 11px; color: #888; margin-top: 2px; }
+    .wi-actions { display: flex; gap: 5px; }
+    #no-widgets { text-align: center; color: #999; padding: 28px; font-size: 13px; }
+
+    /* モーダル */
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-bg.hidden { display: none; }
+    .modal-box {
+      background: #fff; border-radius: 10px;
+      width: 520px; max-width: 95vw; max-height: 90vh;
+      overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .modal-head {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #e8e8e8;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-head h3 { font-size: 15px; color: #0066cc; }
+    .modal-body { padding: 20px; }
+    .modal-foot {
+      padding: 12px 20px;
+      border-top: 1px solid #e8e8e8;
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    .wc-sec { display: none; border-top: 1px solid #eee; padding-top: 14px; margin-top: 6px; }
+    .wc-sec.active { display: block; }
+
+    .chk-list {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 8px; border: 1px solid #e0e0e0;
+      border-radius: 4px; max-height: 150px;
+      overflow-y: auto; background: #fafafa;
+    }
+    .chk-list label { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+
+    .layout-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+
+    /* 保存フッター */
+    .save-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 2px solid #0066cc;
+      padding: 12px 24px; display: flex; align-items: center;
+      gap: 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); z-index: 50;
+    }
+    .save-bar-spacer { flex: 1; }
+    #save-status { font-size: 13px; color: #666; }
+    #save-status.success { color: #2d7a3a; }
+    #save-status.error   { color: #cc0000; }
+
+    /* 注意書き */
+    .notice {
+      background: #fff8e1; border: 1px solid #f0c040;
+      border-radius: 6px; padding: 12px 14px;
+      font-size: 12px; color: #7a5900; line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .notice code { background: #f5e8b0; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <span style="font-size:22px">📊</span>
+  <div>
+    <h1>ダッシュボードビルダー</h1>
+    <div class="sub">kintoneダッシュボードの設定・管理ツール</div>
+  </div>
+  <div class="header-spacer"></div>
+  <div id="header-status" class="header-status"></div>
+</header>
+
+<div class="container">
+
+  <div class="notice">
+    <strong>⚠️ 初回セットアップ（一度だけ必要）：</strong><br>
+    kintone管理画面 → システム管理 → セキュリティ → <strong>CORS設定</strong> →
+    許可オリジンに <code>http://localhost:8080</code> を追加してください。<br>
+    追加しないとkintoneへのAPI接続がブロックされます。
+  </div>
+
+  <!-- 接続設定 -->
+  <div class="card">
+    <div class="card-head"><h2>🔌 接続設定</h2></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <label>サブドメイン</label>
+        <div class="input-sfx">
+          <input type="text" id="inp-subdomain" placeholder="your-company">
+          <span class="sfx">.cybozu.com</span>
+        </div>
+
+        <div class="sec-title">設定保存用アプリ（ダッシュボード設定を保存するアプリ）</div>
+        <label>設定アプリID</label>
+        <input type="number" id="inp-config-app-id" placeholder="例: 10" min="1">
+        <label>設定アプリ APIトークン</label>
+        <input type="text" id="inp-config-token" placeholder="設定保存用アプリのAPIトークン（追加・編集・閲覧権限）">
+
+        <div class="sec-title">対象アプリ（ダッシュボードを表示するアプリ）</div>
+        <label>対象アプリID</label>
+        <input type="number" id="inp-target-app-id" placeholder="例: 5" min="1">
+        <label>対象アプリ APIトークン</label>
+        <input type="text" id="inp-target-token" placeholder="フィールド・ビュー読み込み用（閲覧権限）">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="btn-test">接続テスト</button>
+        <button class="btn btn-secondary" id="btn-load-fields">フィールドを読み込む</button>
+        <button class="btn btn-secondary" id="btn-load-kintone">kintoneから設定を読み込む</button>
+      </div>
+      <div id="conn-status" class="status-msg"></div>
+    </div>
+  </div>
+
+  <!-- 表示設定 -->
+  <div class="card">
+    <div class="card-head"><h2>🖥️ 表示設定</h2></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <label>表示するビュー</label>
+        <select id="sel-view">
+          <option value="">すべての一覧に表示</option>
+        </select>
+      </div>
+      <p style="font-size:12px;color:#888;margin-top:8px">※「フィールドを読み込む」後にビュー一覧が反映されます</p>
+    </div>
+  </div>
+
+  <!-- ウィジェット -->
+  <div class="card">
+    <div class="card-head">
+      <h2>🧩 ウィジェット</h2>
+      <button class="btn btn-primary btn-sm" id="btn-add">＋ 追加</button>
+    </div>
+    <div class="card-body">
+      <div id="widget-list">
+        <p id="no-widgets">ウィジェットがまだありません。「追加」ボタンで追加してください。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 保存フッター -->
+<div class="save-bar">
+  <div id="save-status"></div>
+  <div class="save-bar-spacer"></div>
+  <button class="btn btn-success btn-lg" id="btn-save">💾 kintoneへ保存</button>
+</div>
+
+<!-- ウィジェット追加/編集モーダル -->
+<div class="modal-bg hidden" id="widget-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title">ウィジェットを追加</h3>
+      <button class="btn btn-secondary btn-sm" id="btn-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>種別</label>
+        <select id="m-type">
+          <option value="number_card">🔢 数値カード</option>
+          <option value="table">📋 テーブル</option>
+          <option value="bar_chart">📊 棒グラフ</option>
+          <option value="pie_chart">🥧 円グラフ</option>
+          <option value="filter">🔍 フィルタ</option>
+        </select>
+        <label>タイトル</label>
+        <input type="text" id="m-title" placeholder="ウィジェット名">
+      </div>
+
+      <!-- 数値カード -->
+      <div class="wc-sec" id="wc-number_card">
+        <div class="form-grid">
+          <label>フィールド</label><select id="m-nc-field"><option value="">選択してください</option></select>
+          <label>集計</label>
+          <select id="m-nc-agg">
+            <option value="COUNT">件数</option>
+            <option value="SUM">合計</option>
+            <option value="AVG">平均</option>
+          </select>
+          <label>単位</label><input type="text" id="m-nc-unit" placeholder="例: 件、円">
+        </div>
+      </div>
+
+      <!-- テーブル -->
+      <div class="wc-sec" id="wc-table">
+        <div class="form-grid">
+          <label>表示フィールド</label><div class="chk-list" id="m-table-fields"></div>
+          <label>最大件数</label><input type="number" id="m-table-limit" value="20" min="1" max="500">
+        </div>
+      </div>
+
+      <!-- 棒グラフ -->
+      <div class="wc-sec" id="wc-bar_chart">
+        <div class="form-grid">
+          <label>X軸（分類）</label><select id="m-bar-x"><option value="">選択してください</option></select>
+          <label>Y軸（数値）</label><select id="m-bar-y"><option value="">選択してください</option></select>
+          <label>集計</label>
+          <select id="m-bar-agg">
+            <option value="SUM">合計</option>
+            <option value="COUNT">件数</option>
+            <option value="AVG">平均</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 円グラフ -->
+      <div class="wc-sec" id="wc-pie_chart">
+        <div class="form-grid">
+          <label>分類フィールド</label><select id="m-pie-label"><option value="">選択してください</option></select>
+          <label>数値フィールド</label><select id="m-pie-value"><option value="">選択してください</option></select>
+          <label>集計</label>
+          <select id="m-pie-agg">
+            <option value="SUM">合計</option>
+            <option value="COUNT">件数</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- フィルタ -->
+      <div class="wc-sec" id="wc-filter">
+        <div class="form-grid">
+          <label>フィルタ種別</label>
+          <select id="m-filter-type">
+            <option value="date_range">日付範囲</option>
+            <option value="dropdown">ドロップダウン</option>
+            <option value="text">テキスト</option>
+          </select>
+          <label>対象フィールド</label><select id="m-filter-field"><option value="">選択してください</option></select>
+        </div>
+      </div>
+
+      <!-- レイアウト -->
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eee">
+        <div style="font-size:11px;font-weight:bold;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">レイアウト（12カラムグリッド）</div>
+        <div class="layout-row">
+          <div class="form-grid" style="grid-template-columns:60px 1fr">
+            <label>幅</label>
+            <select id="m-layout-w">
+              <option value="3">3/12（小）</option>
+              <option value="4">4/12</option>
+              <option value="6" selected>6/12（半分）</option>
+              <option value="8">8/12（大）</option>
+              <option value="12">12/12（全幅）</option>
+            </select>
+          </div>
+          <div class="form-grid" style="grid-template-columns:60px 1fr">
+            <label>高さ</label>
+            <select id="m-layout-h">
+              <option value="3">3（低）</option>
+              <option value="4" selected>4（標準）</option>
+              <option value="5">5</option>
+              <option value="6">6（高）</option>
+              <option value="8">8（特大）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="btn-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="btn-modal-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var STORAGE_KEY = 'dashboard_builder_conn';
+var WIDGET_TYPES = {
+  number_card: { label: '数値カード', icon: '🔢' },
+  table:       { label: 'テーブル',   icon: '📋' },
+  bar_chart:   { label: '棒グラフ',   icon: '📊' },
+  pie_chart:   { label: '円グラフ',   icon: '🥧' },
+  filter:      { label: 'フィルタ',   icon: '🔍' }
+};
+
+var state = {
+  subdomain: '', configAppId: '', configToken: '', targetAppId: '', targetToken: ''
+};
+var fields = [];
+var config = { targetView: '', widgets: [] };
+var editingIndex = -1;
+
+// ---- 初期化 ----
+(function() {
+  loadStateFromStorage();
+  bindEvents();
+  renderWidgetList();
+})();
+
+function loadStateFromStorage() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    Object.assign(state, JSON.parse(raw));
+    setVal('inp-subdomain',      state.subdomain);
+    setVal('inp-config-app-id',  state.configAppId);
+    setVal('inp-config-token',   state.configToken);
+    setVal('inp-target-app-id',  state.targetAppId);
+    setVal('inp-target-token',   state.targetToken);
+  } catch(e) {}
+}
+
+function saveStateToStorage() {
+  state.subdomain   = getVal('inp-subdomain').trim();
+  state.configAppId = getVal('inp-config-app-id').trim();
+  state.configToken = getVal('inp-config-token').trim();
+  state.targetAppId = getVal('inp-target-app-id').trim();
+  state.targetToken = getVal('inp-target-token').trim();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function bindEvents() {
+  document.getElementById('btn-test').addEventListener('click', testConnection);
+  document.getElementById('btn-load-fields').addEventListener('click', loadFieldsAndViews);
+  document.getElementById('btn-load-kintone').addEventListener('click', loadFromKintone);
+  document.getElementById('btn-add').addEventListener('click', openAddModal);
+  document.getElementById('btn-save').addEventListener('click', saveToKintone);
+  document.getElementById('btn-modal-close').addEventListener('click', closeModal);
+  document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('btn-modal-save').addEventListener('click', saveWidget);
+  document.getElementById('m-type').addEventListener('change', onTypeChange);
+}
+
+// ---- API ----
+function getBase() {
+  var sub = getVal('inp-subdomain').trim();
+  return sub ? 'https://' + sub + '.cybozu.com' : null;
+}
+
+function apiCall(url, method, token, body) {
+  var headers = { 'X-Cybozu-API-Token': token };
+  var opts = { method: method || 'GET', headers: headers };
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  return fetch(url, opts).then(function(res) {
+    return res.json().then(function(data) {
+      if (!res.ok) throw new Error(data.message || 'APIエラー (' + res.status + ')');
+      return data;
+    });
+  }).catch(function(err) {
+    if (err.message && (err.message.indexOf('Failed to fetch') !== -1 || err.message.indexOf('NetworkError') !== -1)) {
+      throw new Error('接続できませんでした。CORSが未設定の可能性があります。\nkintone管理画面 → セキュリティ → CORS設定 → http://localhost:8080 を追加してください。');
+    }
+    throw err;
+  });
+}
+
+// ---- 接続テスト ----
+function testConnection() {
+  saveStateToStorage();
+  var base  = getBase();
+  var appId = state.configAppId;
+  var token = state.configToken;
+  if (!base)           { showConn('サブドメインを入力してください', 'error'); return; }
+  if (!appId || !token) { showConn('設定アプリIDとAPIトークンを入力してください', 'error'); return; }
+
+  showConn('接続確認中...', 'info');
+  apiCall(base + '/k/v1/app.json?id=' + encodeURIComponent(appId), 'GET', token)
+    .then(function(d) { showConn('接続成功：' + (d.name || appId), 'success'); })
+    .catch(function(e) { showConn(e.message, 'error'); });
+}
+
+// ---- フィールド・ビュー読み込み ----
+function loadFieldsAndViews() {
+  saveStateToStorage();
+  var base  = getBase();
+  var appId = state.targetAppId;
+  var token = state.targetToken;
+  if (!base || !appId || !token) { showConn('対象アプリIDとAPIトークンを入力してください', 'error'); return; }
+
+  showConn('フィールド・ビューを読み込み中...', 'info');
+
+  Promise.all([
+    apiCall(base + '/k/v1/app/form/fields.json?app=' + encodeURIComponent(appId), 'GET', token),
+    apiCall(base + '/k/v1/app/views.json?app='       + encodeURIComponent(appId), 'GET', token)
+  ]).then(function(results) {
+    var fResp = results[0], vResp = results[1];
+
+    fields = [];
+    Object.keys(fResp.properties).forEach(function(code) {
+      var p = fResp.properties[code];
+      fields.push({ code: code, label: p.label, type: p.type });
+    });
+    fields.sort(function(a, b) { return a.label.localeCompare(b.label, 'ja'); });
+
+    var sel = document.getElementById('sel-view');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">すべての一覧に表示</option>';
+    Object.keys(vResp.views).forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.value = config.targetView || cur;
+
+    refreshModalSelects();
+    showConn(
+      'フィールド ' + fields.length + ' 件・ビュー ' + Object.keys(vResp.views).length + ' 件を読み込みました',
+      'success'
+    );
+  }).catch(function(e) { showConn(e.message, 'error'); });
+}
+
+// ---- kintoneから読み込み ----
+function loadFromKintone() {
+  saveStateToStorage();
+  var base     = getBase();
+  var configId = state.configAppId;
+  var cfgToken = state.configToken;
+  var targetId = state.targetAppId;
+  if (!base || !configId || !cfgToken || !targetId) {
+    showConn('接続設定をすべて入力してください', 'error'); return;
+  }
+
+  showConn('kintoneから設定を読み込み中...', 'info');
+  var url = base + '/k/v1/records.json?app=' + encodeURIComponent(configId) +
+    '&query=' + encodeURIComponent('source_app_id = "' + targetId + '" limit 1');
+
+  apiCall(url, 'GET', cfgToken).then(function(data) {
+    if (data.records && data.records.length > 0) {
+      var rec = data.records[0];
+      try { config = JSON.parse(rec.dashboard_config.value || '{}'); } catch(e) { config = {}; }
+      config._recordId = rec.$id.value;
+      if (!config.widgets) config.widgets = [];
+      if (config.targetView) setVal('sel-view', config.targetView);
+      renderWidgetList();
+      showConn('設定を読み込みました（ウィジェット ' + config.widgets.length + ' 件）', 'success');
+    } else {
+      config = { widgets: [] };
+      renderWidgetList();
+      showConn('kintoneに設定がまだ保存されていません。新規作成になります。', 'info');
+    }
+  }).catch(function(e) { showConn('読み込み失敗：' + e.message, 'error'); });
+}
+
+// ---- kintoneへ保存 ----
+function saveToKintone() {
+  saveStateToStorage();
+  var base     = getBase();
+  var configId = state.configAppId;
+  var cfgToken = state.configToken;
+  var targetId = state.targetAppId;
+  if (!base || !configId || !cfgToken || !targetId) {
+    setSaveStatus('接続設定を入力してください', 'error'); return;
+  }
+
+  config.targetView = getVal('sel-view');
+  computeLayout(config.widgets);
+
+  var save     = Object.assign({}, config);
+  var recordId = save._recordId;
+  delete save._recordId;
+
+  var isUpdate = !!recordId;
+  var url  = base + '/k/v1/record' + (isUpdate ? '' : 's') + '.json';
+  var body = isUpdate
+    ? { app: configId, id: recordId,
+        record: { dashboard_config: { value: JSON.stringify(save) } } }
+    : { app: configId,
+        record: {
+          source_app_id:    { value: String(targetId) },
+          dashboard_config: { value: JSON.stringify(save) }
+        }};
+
+  setSaveStatus('保存中...', '');
+  apiCall(url, isUpdate ? 'PUT' : 'POST', cfgToken, body).then(function(resp) {
+    if (!isUpdate && resp.id) config._recordId = resp.id;
+    var t = new Date().toLocaleTimeString('ja-JP');
+    setSaveStatus(t + ' に保存しました ✓', 'success');
+    showHeaderStatus('保存完了 ✓', 'success');
+  }).catch(function(e) {
+    setSaveStatus('保存失敗：' + e.message, 'error');
+    showHeaderStatus('保存失敗 ✗', 'error');
+  });
+}
+
+// ウィジェットの x,y を自動計算（左→右→折り返し）
+function computeLayout(widgets) {
+  var x = 0, y = 0, rowH = 0;
+  (widgets || []).forEach(function(w) {
+    var lw = (w.layout && w.layout.w) || 6;
+    var lh = (w.layout && w.layout.h) || 4;
+    if (x + lw > 12) { y += rowH; x = 0; rowH = 0; }
+    w.layout = { x: x, y: y, w: lw, h: lh };
+    x  += lw;
+    rowH = Math.max(rowH, lh);
+  });
+}
+
+// ---- ウィジェット一覧 ----
+function renderWidgetList() {
+  var list     = document.getElementById('widget-list');
+  var noWidget = document.getElementById('no-widgets');
+  list.querySelectorAll('.widget-item').forEach(function(el) { el.remove(); });
+
+  if (!config.widgets || !config.widgets.length) {
+    noWidget.style.display = '';
+    return;
+  }
+  noWidget.style.display = 'none';
+
+  config.widgets.forEach(function(w, i) {
+    var info = WIDGET_TYPES[w.type] || { label: w.type, icon: '❓' };
+    var meta = buildMeta(w);
+    var lw   = (w.layout && w.layout.w) || 6;
+    var lh   = (w.layout && w.layout.h) || 4;
+    var item = document.createElement('div');
+    item.className = 'widget-item';
+    item.innerHTML =
+      '<span class="wi-icon">' + info.icon + '</span>' +
+      '<div class="wi-info">' +
+        '<div class="wi-name">' + escHtml(w.title) + '</div>' +
+        '<div class="wi-meta">' + info.label + (meta ? '　' + meta : '') +
+          '　幅:' + lw + '/12　高さ:' + lh + '</div>' +
+      '</div>' +
+      '<div class="wi-actions">' +
+        (i > 0 ? '<button class="btn btn-secondary btn-sm" data-i="' + i + '" data-a="up">↑</button>' : '') +
+        (i < config.widgets.length - 1 ? '<button class="btn btn-secondary btn-sm" data-i="' + i + '" data-a="down">↓</button>' : '') +
+        '<button class="btn btn-secondary btn-sm" data-i="' + i + '" data-a="edit">編集</button>' +
+        '<button class="btn btn-danger btn-sm"    data-i="' + i + '" data-a="del">削除</button>' +
+      '</div>';
+    list.appendChild(item);
+  });
+
+  list.querySelectorAll('[data-a]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var i = parseInt(btn.dataset.i), a = btn.dataset.a;
+      if (a === 'edit') { openEditModal(i); }
+      else if (a === 'del')  { if (confirm('削除しますか？')) { config.widgets.splice(i, 1); renderWidgetList(); } }
+      else if (a === 'up')   { swap(i, i - 1); renderWidgetList(); }
+      else if (a === 'down') { swap(i, i + 1); renderWidgetList(); }
+    });
+  });
+}
+
+function buildMeta(w) {
+  switch(w.type) {
+    case 'number_card': return w.field ? w.aggregation + ':' + w.field : '';
+    case 'table':       return w.fields ? w.fields.length + '列' : '';
+    case 'bar_chart':   return (w.xField && w.yField) ? w.xField + ' × ' + w.yField : '';
+    case 'pie_chart':   return w.labelField || '';
+    case 'filter':      return w.field ? w.filterType + ':' + w.field : '';
+    default: return '';
+  }
+}
+
+function swap(i, j) { var t = config.widgets[i]; config.widgets[i] = config.widgets[j]; config.widgets[j] = t; }
+
+// ---- モーダル ----
+function openAddModal() {
+  editingIndex = -1;
+  document.getElementById('modal-title').textContent = 'ウィジェットを追加';
+  resetModal();
+  document.getElementById('widget-modal').classList.remove('hidden');
+}
+
+function openEditModal(i) {
+  editingIndex = i;
+  var w = config.widgets[i];
+  document.getElementById('modal-title').textContent = 'ウィジェットを編集';
+  resetModal();
+  setVal('m-type', w.type); setVal('m-title', w.title);
+  onTypeChange();
+  var lw = (w.layout && w.layout.w) || 6;
+  var lh = (w.layout && w.layout.h) || 4;
+  setVal('m-layout-w', lw); setVal('m-layout-h', lh);
+  switch(w.type) {
+    case 'number_card':
+      setVal('m-nc-field', w.field); setVal('m-nc-agg', w.aggregation || 'COUNT'); setVal('m-nc-unit', w.unit || '');
+      break;
+    case 'table':
+      (w.fields || []).forEach(function(code) {
+        var chk = document.querySelector('#m-table-fields input[value="' + code + '"]');
+        if (chk) chk.checked = true;
+      });
+      setVal('m-table-limit', w.limit || 20);
+      break;
+    case 'bar_chart':
+      setVal('m-bar-x', w.xField); setVal('m-bar-y', w.yField); setVal('m-bar-agg', w.aggregation || 'SUM');
+      break;
+    case 'pie_chart':
+      setVal('m-pie-label', w.labelField); setVal('m-pie-value', w.valueField); setVal('m-pie-agg', w.aggregation || 'SUM');
+      break;
+    case 'filter':
+      setVal('m-filter-type', w.filterType); setVal('m-filter-field', w.field);
+      break;
+  }
+  document.getElementById('widget-modal').classList.remove('hidden');
+}
+
+function closeModal() { document.getElementById('widget-modal').classList.add('hidden'); }
+
+function resetModal() {
+  setVal('m-type', 'number_card'); setVal('m-title', '');
+  setVal('m-nc-field', ''); setVal('m-nc-agg', 'COUNT'); setVal('m-nc-unit', '');
+  setVal('m-table-limit', 20);
+  document.querySelectorAll('#m-table-fields input').forEach(function(c) { c.checked = false; });
+  setVal('m-bar-x', ''); setVal('m-bar-y', ''); setVal('m-bar-agg', 'SUM');
+  setVal('m-pie-label', ''); setVal('m-pie-value', ''); setVal('m-pie-agg', 'SUM');
+  setVal('m-filter-type', 'date_range'); setVal('m-filter-field', '');
+  setVal('m-layout-w', 6); setVal('m-layout-h', 4);
+  onTypeChange();
+}
+
+function onTypeChange() {
+  var type = getVal('m-type');
+  document.querySelectorAll('.wc-sec').forEach(function(el) { el.classList.remove('active'); });
+  var sec = document.getElementById('wc-' + type);
+  if (sec) sec.classList.add('active');
+}
+
+function saveWidget() {
+  var type  = getVal('m-type');
+  var title = getVal('m-title').trim();
+  if (!title) { alert('タイトルを入力してください'); return; }
+
+  var w = { type: type, title: title };
+  var lw = parseInt(getVal('m-layout-w')) || 6;
+  var lh = parseInt(getVal('m-layout-h')) || 4;
+
+  switch(type) {
+    case 'number_card':
+      w.field = getVal('m-nc-field'); w.aggregation = getVal('m-nc-agg'); w.unit = getVal('m-nc-unit');
+      if (!w.field) { alert('フィールドを選択してください'); return; }
+      break;
+    case 'table':
+      w.fields = [];
+      document.querySelectorAll('#m-table-fields input:checked').forEach(function(c) { w.fields.push(c.value); });
+      w.limit = parseInt(getVal('m-table-limit')) || 20;
+      if (!w.fields.length) { alert('フィールドを1つ以上選択してください'); return; }
+      break;
+    case 'bar_chart':
+      w.xField = getVal('m-bar-x'); w.yField = getVal('m-bar-y'); w.aggregation = getVal('m-bar-agg');
+      if (!w.xField || !w.yField) { alert('X軸・Y軸を選択してください'); return; }
+      break;
+    case 'pie_chart':
+      w.labelField = getVal('m-pie-label'); w.valueField = getVal('m-pie-value'); w.aggregation = getVal('m-pie-agg');
+      if (!w.labelField || !w.valueField) { alert('分類・数値フィールドを選択してください'); return; }
+      break;
+    case 'filter':
+      w.filterType = getVal('m-filter-type'); w.field = getVal('m-filter-field');
+      if (!w.field) { alert('フィールドを選択してください'); return; }
+      break;
+  }
+
+  if (editingIndex !== -1 && config.widgets[editingIndex].layout) {
+    w.layout = Object.assign({}, config.widgets[editingIndex].layout, { w: lw, h: lh });
+  } else {
+    w.layout = { x: 0, y: 0, w: lw, h: lh };
+  }
+
+  if (editingIndex === -1) { config.widgets.push(w); }
+  else                     { config.widgets[editingIndex] = w; }
+
+  closeModal();
+  renderWidgetList();
+}
+
+// ---- フィールドセレクト更新 ----
+function refreshModalSelects() {
+  var nums = fields.filter(function(f) { return ['NUMBER','CALC','RECORD_NUMBER'].indexOf(f.type) !== -1; });
+  var strs = fields.filter(function(f) { return ['SINGLE_LINE_TEXT','DROP_DOWN','RADIO_BUTTON','STATUS'].indexOf(f.type) !== -1; });
+
+  fillSel('m-nc-field',     dedup(nums.concat(fields)));
+  fillSel('m-bar-x',        dedup(strs.concat(fields)));
+  fillSel('m-bar-y',        nums);
+  fillSel('m-pie-label',    dedup(strs.concat(fields)));
+  fillSel('m-pie-value',    nums);
+  fillSel('m-filter-field', fields);
+
+  var box = document.getElementById('m-table-fields');
+  if (box) {
+    box.innerHTML = '';
+    fields.forEach(function(f) {
+      var lbl = document.createElement('label');
+      var chk = document.createElement('input');
+      chk.type = 'checkbox'; chk.value = f.code;
+      lbl.appendChild(chk);
+      lbl.appendChild(document.createTextNode(' ' + f.label));
+      box.appendChild(lbl);
+    });
+  }
+}
+
+function dedup(arr) {
+  var seen = {}, out = [];
+  arr.forEach(function(f) { if (!seen[f.code]) { seen[f.code] = true; out.push(f); } });
+  return out;
+}
+
+function fillSel(id, list) {
+  var sel = document.getElementById(id); if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">選択してください</option>';
+  list.forEach(function(f) {
+    var opt = document.createElement('option');
+    opt.value = f.code;
+    opt.textContent = f.label + ' (' + f.code + ')';
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+// ---- ユーティリティ ----
+function getVal(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+function setVal(id, v) { var el = document.getElementById(id); if (el && v != null) el.value = v; }
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showConn(msg, type) {
+  var el = document.getElementById('conn-status');
+  el.textContent = msg;
+  el.className = 'status-msg show' + (type ? ' ' + type : '');
+}
+function setSaveStatus(msg, type) {
+  var el = document.getElementById('save-status');
+  el.textContent = msg;
+  el.className = type || '';
+}
+function showHeaderStatus(msg, type) {
+  var el = document.getElementById('header-status');
+  el.textContent = msg;
+  el.className = 'header-status ' + (type || '');
+  setTimeout(function() { el.textContent = ''; el.className = 'header-status'; }, 3000);
+}
+</script>
+</body>
+</html>
