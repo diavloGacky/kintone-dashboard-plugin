@@ -1,7 +1,49 @@
 (function() {
   'use strict';
 
+  /* ----------------------------------------------------------------
+     ライセンス検証（config.js・generate_license.html と同じソルト）
+     ---------------------------------------------------------------- */
+  var _SALT = 'guke4jmzvkzlqodelp6wr4ygvdti6rrhyte9yrsr';
+
+  function _computeHash(domain) {
+    var str = domain.toLowerCase().trim() + _SALT;
+    var hash = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return ('0000000' + hash.toString(16)).slice(-8);
+  }
+
+  function _validateLicense(key, hostname) {
+    if (!key || !key.trim()) {
+      return { ok: false, msg: '🔑 ライセンスキーが設定されていません。プラグイン設定画面で入力してください。' };
+    }
+    var parts = key.trim().split('-');
+    if (parts.length !== 4 || parts[0] !== 'KDP' ||
+        !/^\d{4}$/.test(parts[1]) || !/^\d{4}$/.test(parts[2])) {
+      return { ok: false, msg: '🔑 ライセンスキーの形式が正しくありません。設定画面で再確認してください。' };
+    }
+    if (hostname === 'localhost') return { ok: true };
+    if (!/\.(cybozu\.com|cybozu-dev\.com|cybozu\.cn|kintone\.com)$/.test(hostname)) {
+      return { ok: false, msg: '⚠ このプラグインは kintone 環境以外では動作しません。' };
+    }
+    if (parts[3].toLowerCase() !== _computeHash(hostname)) {
+      return { ok: false, msg: '🔑 このドメインではご利用いただけません。ご購入時のドメイン用ライセンスキーをご確認ください。' };
+    }
+    return { ok: true };
+  }
+
+  function _showLicenseError(msg) {
+    var sp = kintone.app.getHeaderSpaceElement();
+    if (sp) sp.innerHTML = '<div class="db-license-error">' + msg + '</div>';
+  }
+
   var PLUGIN_ID = kintone.$PLUGIN_ID;
+
+  var GRID_COLS = 12;        // グリッド列数
+  var CELL_H    = 40;        // セル高さ（px）
 
   var settings   = null;   // プラグイン設定
   var records    = [];     // 取得済みレコード
@@ -23,10 +65,34 @@
       return;
     }
 
+    // ライセンス検証
+    var licResult = _validateLicense(settings.licenseKey, location.hostname);
+    if (!licResult.ok) {
+      _showLicenseError(licResult.msg);
+      return;
+    }
+
     if (!settings.widgets || settings.widgets.length === 0) return;
 
     // 表示ビューのフィルタ
     if (settings.targetView && event.viewName !== settings.targetView) return;
+
+    // セル高さ変更（80px→40px）に伴うY座標・H値のマイグレーション
+    var savedCellH = settings.gridCellH || 80;
+    if (savedCellH !== CELL_H) {
+      var hFactor = savedCellH / CELL_H;
+      settings.widgets = settings.widgets.map(function(w) {
+        if (w.layout) {
+          w.layout = {
+            x: w.layout.x,
+            y: Math.round(w.layout.y * hFactor),
+            w: w.layout.w,
+            h: Math.max(2, Math.round(w.layout.h * hFactor))
+          };
+        }
+        return w;
+      });
+    }
 
     // ダッシュボードDOM構築
     buildDashboardDOM();
@@ -77,15 +143,20 @@
     var header = kintone.app.getHeaderSpaceElement();
     header.appendChild(dash);
 
-    // gridstack初期化
+    var dashGrid = document.getElementById('dashboard-grid');
     gridObj = GridStack.init({
-      column:      12,
-      cellHeight:  80,
+      column:      GRID_COLS,
+      cellHeight:  CELL_H,
       handle:      '.widget-header, .widget-drag-handle',
       draggable:   { enabled: false },
       resizable:   { enabled: false },
       staticGrid:  true
     }, '#dashboard-grid');
+
+    // 背景色適用
+    if (settings.dashboardBgColor) {
+      dash.style.setProperty('--db-bg', settings.dashboardBgColor);
+    }
 
     // ボタンイベント
     document.getElementById('db-refresh-btn').addEventListener('click', refreshDashboard);
@@ -137,10 +208,16 @@
           if (fv.to)   conditions.push(field + ' <= "' + fv.to   + '"');
           break;
         case 'dropdown':
-          if (fv.value) conditions.push(field + ' = "' + fv.value + '"');
+        case 'radio':
+          if (fv.value) conditions.push(field + ' = "' + fv.value.replace(/"/g, '\\"') + '"');
           break;
         case 'text':
           if (fv.value) conditions.push(field + ' like "' + fv.value + '"');
+          break;
+        case 'checkbox':
+          if (fv.values && fv.values.length > 0) {
+            conditions.push(field + ' in ("' + fv.values.map(function(v) { return v.replace(/"/g, '\\"'); }).join('","') + '")');
+          }
           break;
       }
     });
@@ -193,6 +270,56 @@
           var txt = makeInput('text', function(v) { setFilter(i, w, 'value', v); });
           txt.placeholder = '検索...';
           item.appendChild(txt);
+          break;
+        case 'checkbox':
+          (function(idx, widget) {
+            var cbVals = getDistinctValues(records, widget.field);
+            var cbGroup = document.createElement('div');
+            cbGroup.className = 'filter-check-group';
+            cbVals.forEach(function(v) {
+              var lbl = document.createElement('label');
+              lbl.className = 'filter-check-label';
+              var chk = document.createElement('input');
+              chk.type = 'checkbox'; chk.value = v;
+              chk.addEventListener('change', function() {
+                var selected = [];
+                cbGroup.querySelectorAll('input:checked').forEach(function(c) { selected.push(c.value); });
+                if (!filterVals[idx]) filterVals[idx] = { type: 'checkbox', field: widget.field };
+                filterVals[idx].values = selected;
+                refreshDashboard();
+              });
+              lbl.appendChild(chk);
+              lbl.appendChild(document.createTextNode(' ' + v));
+              cbGroup.appendChild(lbl);
+            });
+            item.appendChild(cbGroup);
+          }(i, w));
+          break;
+        case 'radio':
+          (function(idx, widget) {
+            var rdVals = getDistinctValues(records, widget.field);
+            var rdGroup = document.createElement('div');
+            rdGroup.className = 'filter-check-group';
+            var allLbl = document.createElement('label');
+            allLbl.className = 'filter-check-label';
+            var allRad = document.createElement('input');
+            allRad.type = 'radio'; allRad.name = 'frd-' + idx; allRad.value = ''; allRad.checked = true;
+            allRad.addEventListener('change', function() { setFilter(idx, widget, 'value', ''); });
+            allLbl.appendChild(allRad);
+            allLbl.appendChild(document.createTextNode(' すべて'));
+            rdGroup.appendChild(allLbl);
+            rdVals.forEach(function(v) {
+              var lbl = document.createElement('label');
+              lbl.className = 'filter-check-label';
+              var rad = document.createElement('input');
+              rad.type = 'radio'; rad.name = 'frd-' + idx; rad.value = v;
+              rad.addEventListener('change', function() { setFilter(idx, widget, 'value', v); });
+              lbl.appendChild(rad);
+              lbl.appendChild(document.createTextNode(' ' + v));
+              rdGroup.appendChild(lbl);
+            });
+            item.appendChild(rdGroup);
+          }(i, w));
           break;
       }
 
@@ -258,8 +385,8 @@
 
   function getDefaultLayout(index) {
     var col = (index % 2) * 6;
-    var row = Math.floor(index / 2) * 4;
-    return { x: col, y: row, w: 6, h: 4 };
+    var row = Math.floor(index / 2) * 8;
+    return { x: col, y: row, w: 6, h: 8 };
   }
 
   function renderWidgetHeader(w) {
@@ -383,36 +510,74 @@
     body.appendChild(d);
   }
 
-  // ---- 棒グラフ ----
+  // ---- 棒グラフ（折れ線・積み上げ含む） ----
   function renderBarChart(widget, id, body, recs) {
-    var grouped = groupBy(recs, widget.xField, widget.yField, widget.aggregation);
-    var labels  = Object.keys(grouped);
-    var values  = labels.map(function(k) { return grouped[k]; });
-
     body.innerHTML = '<canvas id="chart-' + id + '"></canvas>';
     body.style.display = 'block';
     body.style.padding = '8px';
-
     if (chartObjs[id]) chartObjs[id].destroy();
+    chartObjs[id] = new Chart(
+      document.getElementById('chart-' + id),
+      buildBarChartConfig(widget, recs)
+    );
+  }
 
-    chartObjs[id] = new Chart(document.getElementById('chart-' + id), {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: widget.title,
-          data: values,
-          backgroundColor: 'rgba(0, 102, 204, 0.7)',
-          borderColor: 'rgba(0, 102, 204, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: { legend: { display: false } }
-      }
-    });
+  var CHART_PALETTE = [
+    'rgba(0,102,204,0.75)', 'rgba(220,80,60,0.75)', 'rgba(40,160,80,0.75)',
+    'rgba(255,160,0,0.75)', 'rgba(120,60,180,0.75)', 'rgba(0,180,200,0.75)',
+    'rgba(230,100,150,0.75)', 'rgba(80,140,60,0.75)'
+  ];
+
+  function buildBarChartConfig(widget, recs) {
+    var subType   = widget.chartSubType || 'bar';
+    var isStacked = subType === 'stacked_bar' || subType === 'stacked_horizontal';
+    var isHoriz   = subType === 'horizontal_bar' || subType === 'stacked_horizontal';
+    var isLine    = subType === 'line';
+    var chartType = isLine ? 'line' : 'bar';
+
+    var xVals, datasets;
+    if (isStacked && widget.stackField) {
+      xVals = [];
+      recs.forEach(function(r) {
+        var v = getFieldValue(r, widget.xField) || '(空)';
+        if (xVals.indexOf(v) === -1) xVals.push(v);
+      });
+      xVals = xVals.slice(0, 20);
+      var stackGroups = {};
+      recs.forEach(function(r) {
+        var sk = getFieldValue(r, widget.stackField) || '(空)';
+        if (!stackGroups[sk]) stackGroups[sk] = [];
+        stackGroups[sk].push(r);
+      });
+      var stackKeys = Object.keys(stackGroups).slice(0, 10);
+      datasets = stackKeys.map(function(sk, i) {
+        var values = xVals.map(function(xv) {
+          var sub = stackGroups[sk].filter(function(r) { return (getFieldValue(r, widget.xField) || '(空)') === xv; });
+          return aggregate(sub, widget.yField, widget.aggregation);
+        });
+        return { label: sk, data: values, backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length], borderWidth: 1 };
+      });
+    } else {
+      var grouped = groupBy(recs, widget.xField, widget.yField, widget.aggregation);
+      xVals = Object.keys(grouped).slice(0, 20);
+      var vals = xVals.map(function(k) { return grouped[k]; });
+      datasets = [{ label: widget.title, data: vals, backgroundColor: CHART_PALETTE[0], borderColor: CHART_PALETTE[0].replace('0.75', '1'), borderWidth: 1 }];
+    }
+
+    if (isLine) {
+      datasets.forEach(function(ds) { ds.tension = 0.3; ds.fill = false; ds.pointRadius = 3; });
+    }
+
+    var options = {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: datasets.length > 1 } }
+    };
+    if (isHoriz) options.indexAxis = 'y';
+    if (isStacked) {
+      options.scales = { x: { stacked: true }, y: { stacked: true } };
+    }
+
+    return { type: chartType, data: { labels: xVals, datasets: datasets }, options: options };
   }
 
   // ---- 円グラフ ----

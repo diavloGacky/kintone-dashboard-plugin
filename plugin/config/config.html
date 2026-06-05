@@ -11,6 +11,11 @@
   <!-- ヘッダー -->
   <header id="cfg-header">
     <div class="hd-brand">📊 ダッシュボードビルダー</div>
+    <div class="hd-license">
+      <span class="lic-icon">🔑</span>
+      <input type="text" id="license-key" placeholder="KDP-XXXX-XXXX-XXXXXXXX" spellcheck="false" autocomplete="off">
+      <span id="license-status" class="lic-status"></span>
+    </div>
     <div class="hd-conn">
       <input type="text"   id="api-token" placeholder="APIトークン">
       <input type="number" id="app-id"    placeholder="アプリID" min="1">
@@ -22,7 +27,12 @@
         <option value="">すべての一覧に表示</option>
       </select>
     </div>
+    <div class="hd-bg">
+      <label>背景色</label>
+      <input type="color" id="dashboard-bg-color" value="#F3F4F6" title="ダッシュボード背景色">
+    </div>
     <div class="hd-actions">
+      <button id="btn-grid-toggle" class="btn btn-grid-toggle">グリッド線</button>
       <button id="btn-save"   class="btn btn-save">💾 保存</button>
       <button id="btn-cancel" class="btn btn-cancel">キャンセル</button>
     </div>
@@ -145,6 +155,16 @@
         <!-- 棒グラフ -->
         <div class="prop-section hidden" id="ps-bar_chart">
           <div class="prop-row">
+            <label>グラフ種別</label>
+            <select id="p-bar-subtype">
+              <option value="bar">棒グラフ（縦）</option>
+              <option value="horizontal_bar">棒グラフ（横）</option>
+              <option value="line">折れ線グラフ</option>
+              <option value="stacked_bar">積み上げ棒（縦）</option>
+              <option value="stacked_horizontal">積み上げ棒（横）</option>
+            </select>
+          </div>
+          <div class="prop-row">
             <label>X軸（分類）</label>
             <select id="p-bar-x"><option value="">選択してください</option></select>
           </div>
@@ -159,6 +179,10 @@
               <option value="COUNT">件数</option>
               <option value="AVG">平均</option>
             </select>
+          </div>
+          <div class="prop-row" id="p-bar-stack-field-row">
+            <label>積み上げ分類フィールド</label>
+            <select id="p-bar-stack-field"><option value="">（単純集計）</option></select>
           </div>
         </div>
 
@@ -189,6 +213,8 @@
               <option value="date_range">日付範囲</option>
               <option value="dropdown">ドロップダウン</option>
               <option value="text">テキスト</option>
+              <option value="checkbox">チェックボックス（複数選択）</option>
+              <option value="radio">ラジオボタン（単一選択）</option>
             </select>
           </div>
           <div class="prop-row">

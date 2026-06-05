@@ -16,6 +16,47 @@
     { label: '太い区切り', shapeType: 'line',      fillColor: '#0066cc', borderRadius: 0,   opacity: 1,  lineHeight: 4 }
   ];
 
+  /* ----------------------------------------------------------------
+     ライセンス検証（generate_license.html と同じソルトを使うこと）
+     ---------------------------------------------------------------- */
+  var _SALT = 'guke4jmzvkzlqodelp6wr4ygvdti6rrhyte9yrsr';
+
+  function _computeHash(domain) {
+    var str = domain.toLowerCase().trim() + _SALT;
+    var hash = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return ('0000000' + hash.toString(16)).slice(-8);
+  }
+
+  function checkLicenseKey(key) {
+    if (!key || !key.trim()) return 'empty';
+    var parts = key.trim().toUpperCase().split('-');
+    if (parts.length !== 4 || parts[0] !== 'KDP') return 'format';
+    if (!/^\d{4}$/.test(parts[1]) || !/^\d{4}$/.test(parts[2])) return 'format';
+    if (!/^[0-9A-F]{8}$/i.test(parts[3])) return 'format';
+    var expected = _computeHash(location.hostname);
+    if (parts[3].toLowerCase() !== expected) return 'domain';
+    return 'ok';
+  }
+
+  function showLicenseStatus(key) {
+    var el = document.getElementById('license-status');
+    if (!el) return;
+    var result = checkLicenseKey(key);
+    var map = {
+      empty:  { cls: '',        text: '' },
+      format: { cls: 'lic-err', text: '✗ 形式が正しくありません' },
+      domain: { cls: 'lic-err', text: '✗ このドメインでは使用できません' },
+      ok:     { cls: 'lic-ok',  text: '✓ 有効なライセンスキーです' }
+    };
+    var m = map[result] || map['format'];
+    el.className = 'lic-status ' + m.cls;
+    el.textContent = m.text;
+  }
+
   var WIDGET_TYPES = {
     number_card: { label: '数値カード', icon: '🔢' },
     table:       { label: 'テーブル',   icon: '📋' },
@@ -25,6 +66,9 @@
     text_box:    { label: 'テキスト',   icon: '📝' },
     shape:       { label: '図形',       icon: '⬜' }
   };
+
+  var GRID_COLS = 12;        // グリッド列数
+  var CELL_H    = 40;        // セル高さ（px）
 
   var widgets     = [];      // 配置済みウィジェット配列
   var fieldCache  = [];      // フィールド一覧
@@ -38,12 +82,19 @@
   // 初期化
   // ================================================================
   (function init() {
+    var s = null;
     var config = kintone.plugin.app.getConfig(PLUGIN_ID);
     if (config.settings) {
       try {
-        var s = JSON.parse(config.settings);
-        setVal('api-token', s.apiToken || '');
-        setVal('app-id',    s.appId   || '');
+        s = JSON.parse(config.settings);
+        if (s) {
+          setVal('api-token',   s.apiToken      || '');
+          setVal('app-id',      s.appId         || '');
+          setVal('license-key', s.licenseKey    || '');
+          showLicenseStatus(s.licenseKey || '');
+          var bgEl = document.getElementById('dashboard-bg-color');
+          if (bgEl && s.dashboardBgColor) bgEl.value = s.dashboardBgColor;
+        }
         widgets = (s.widgets || []).map(function(w) {
           widgetCount++;
           w.id = w.id || ('w' + widgetCount);
@@ -59,13 +110,24 @@
     }
 
     initGrid();
+
+    // セル高さ変更（80px→40px）に伴うY座標・H値のマイグレーション
+    var savedCellH = s ? (s.gridCellH || 80) : 80;
+    if (savedCellH !== CELL_H && widgets.length > 0) {
+      var hFactor = savedCellH / CELL_H; // 80/40=2（旧より行数2倍必要）
+      widgets.forEach(function(w) {
+        if (w.layout) {
+          w.layout.y = Math.round(w.layout.y * hFactor);
+          w.layout.h = Math.max(2, Math.round(w.layout.h * hFactor));
+        }
+      });
+    }
+
     bindEvents();
 
-    // 保存済みウィジェットがある場合はキャンバスに復元
     if (widgets.length > 0) {
       widgets.forEach(function(w) { addWidgetToCanvas(w, false); });
       hideEmpty();
-      // データがあればプレビューも試みる
       var token = getVal('api-token');
       var appId = getVal('app-id');
       if (token && appId) loadData(false);
@@ -77,10 +139,11 @@
   // ================================================================
   function initGrid() {
     gridObj = GridStack.init({
-      column:     12,
-      cellHeight: 80,
+      column:     GRID_COLS,
+      cellHeight: CELL_H,
       handle:     '.wp-header, .widget-drag-handle',
-      margin:     8
+      margin:     4,
+      float:      true
     }, '#cfg-grid');
 
     gridObj.on('change', function() { syncLayoutFromGrid(); });
@@ -97,6 +160,11 @@
   // イベントバインド
   // ================================================================
   function bindEvents() {
+    var licKeyEl = document.getElementById('license-key');
+    if (licKeyEl) {
+      licKeyEl.addEventListener('input', function() { showLicenseStatus(licKeyEl.value); });
+      licKeyEl.addEventListener('change', function() { showLicenseStatus(licKeyEl.value); });
+    }
     document.getElementById('btn-load-data').addEventListener('click', function() { loadData(true); });
     document.getElementById('btn-save').addEventListener('click', saveConfig);
     document.getElementById('btn-cancel').addEventListener('click', function() { history.back(); });
@@ -104,15 +172,37 @@
     document.getElementById('btn-apply-props').addEventListener('click', applyProps);
     document.getElementById('btn-delete-widget').addEventListener('click', deleteSelected);
 
-    // パレット：クリックでウィジェット追加
+    // グリッド線トグル
+    var gridVisible = false;
+    document.getElementById('btn-grid-toggle').addEventListener('click', function() {
+      gridVisible = !gridVisible;
+      var grid = document.getElementById('cfg-grid');
+      this.classList.toggle('active', gridVisible);
+      if (gridVisible) {
+        grid.style.backgroundImage = [
+          'linear-gradient(to right,  rgba(0,102,204,0.1) 1px, transparent 1px)',
+          'linear-gradient(to bottom, rgba(0,102,204,0.1) 1px, transparent 1px)'
+        ].join(',');
+        grid.style.backgroundSize = 'calc(100% / ' + GRID_COLS + ') ' + CELL_H + 'px';
+        grid.style.backgroundPosition = '0 0';
+      } else {
+        grid.style.backgroundImage = 'none';
+        grid.style.backgroundSize  = '';
+      }
+    });
+
+    // パレット：クリック or ドラッグでウィジェット追加
     document.querySelectorAll('.palette-item').forEach(function(item) {
-      item.addEventListener('click', function() {
-        addNewWidget(item.dataset.type);
+      item.setAttribute('draggable', 'true');
+      item.addEventListener('click', function() { addNewWidget(item.dataset.type); });
+      item.addEventListener('dragstart', function(e) {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('widgettype', item.dataset.type);
       });
     });
 
     // プロパティパネル：変更時にリアルタイム更新
-    ['p-title','p-nc-agg','p-nc-unit','p-bar-agg','p-pie-agg','p-filter-type',
+    ['p-title','p-nc-agg','p-nc-unit','p-bar-subtype','p-bar-agg','p-pie-agg','p-filter-type',
      'p-tb-size','p-tb-color','p-tb-bgcolor','p-tb-align','p-tb-bold',
      'p-sh-fill','p-sh-opacity','p-sh-radius'].forEach(function(id) {
       var el = document.getElementById(id);
@@ -129,7 +219,8 @@
     // キャンバスへのドロップ
     var canvas = document.getElementById('cfg-canvas');
     canvas.addEventListener('dragover', function(e) {
-      if (e.dataTransfer.types.indexOf('shapeindex') !== -1) {
+      var types = e.dataTransfer.types;
+      if (types.indexOf('shapeindex') !== -1 || types.indexOf('widgettype') !== -1) {
         e.preventDefault();
         canvas.classList.add('drag-over');
       }
@@ -139,13 +230,16 @@
     });
     canvas.addEventListener('drop', function(e) {
       canvas.classList.remove('drag-over');
-      var idx = e.dataTransfer.getData('shapeindex');
-      if (idx === '' || idx === null) return;
       e.preventDefault();
-      var preset = PRESET_SHAPES[parseInt(idx)];
-      if (!preset) return;
       var pos = getGridPos(e);
-      addShapeFromPreset(preset, pos.x, pos.y);
+      var shapeIdx = e.dataTransfer.getData('shapeindex');
+      var widgetType = e.dataTransfer.getData('widgettype');
+      if (shapeIdx) {
+        var preset = PRESET_SHAPES[parseInt(shapeIdx)];
+        if (preset) addShapeFromPreset(preset, pos.x, pos.y);
+      } else if (widgetType) {
+        addNewWidget(widgetType, pos.x, pos.y);
+      }
     });
   }
 
@@ -189,8 +283,8 @@
     var relX = dropEvent.clientX - rect.left;
     var relY = dropEvent.clientY - rect.top + canvasEl.scrollTop;
     return {
-      x: Math.max(0, Math.min(10, Math.floor(relX / (rect.width / 12)))),
-      y: Math.max(0, Math.floor(relY / 80))
+      x: Math.max(0, Math.min(10, Math.floor(relX / (rect.width / GRID_COLS)))),
+      y: Math.max(0, Math.floor(relY / CELL_H))
     };
   }
 
@@ -205,7 +299,7 @@
       borderWidth:  0,
       opacity:      preset.opacity !== undefined ? preset.opacity : 1,
       lineHeight:   preset.lineHeight || 4,
-      layout: { x: gx, y: gy, w: 4, h: preset.shapeType === 'line' ? 1 : 3 }
+      layout: { x: gx, y: gy, w: 4, h: preset.shapeType === 'line' ? 2 : 6 }
     };
     widgets.push(w);
     addWidgetToCanvas(w, true);
@@ -267,7 +361,7 @@
   // ================================================================
   // ウィジェット追加
   // ================================================================
-  function addNewWidget(type) {
+  function addNewWidget(type, dropX, dropY) {
     widgetCount++;
     var id = 'w' + widgetCount;
     var info = WIDGET_TYPES[type] || { label: type, icon: '❓' };
@@ -275,11 +369,11 @@
       id:    id,
       type:  type,
       title: info.label,
-      layout: { x: 0, y: 0, w: 6, h: 4 }
+      layout: { x: dropX !== undefined ? dropX : 0, y: dropY !== undefined ? dropY : 0, w: 6, h: 8 }
     };
     if (type === 'number_card') { w.field = ''; w.aggregation = 'COUNT'; w.unit = ''; }
     if (type === 'table')       { w.fields = []; w.limit = 20; }
-    if (type === 'bar_chart')   { w.xField = ''; w.yField = ''; w.aggregation = 'SUM'; }
+    if (type === 'bar_chart')   { w.xField = ''; w.yField = ''; w.aggregation = 'SUM'; w.chartSubType = 'bar'; w.stackField = ''; }
     if (type === 'pie_chart')   { w.labelField = ''; w.valueField = ''; w.aggregation = 'SUM'; }
     if (type === 'filter')      { w.filterType = 'date_range'; w.field = ''; }
     if (type === 'text_box')    { w.content = 'テキストを入力'; w.fontSize = 14; w.textColor = '#333333'; w.bgColor = '#ffffff'; w.textAlign = 'left'; w.bold = false; }
@@ -434,9 +528,12 @@
         });
         break;
       case 'bar_chart':
-        setVal('p-bar-x',   w.xField || '');
-        setVal('p-bar-y',   w.yField || '');
-        setVal('p-bar-agg', w.aggregation || 'SUM');
+        setVal('p-bar-subtype',    w.chartSubType || 'bar');
+        setVal('p-bar-x',          w.xField || '');
+        setVal('p-bar-y',          w.yField || '');
+        setVal('p-bar-agg',        w.aggregation || 'SUM');
+        setVal('p-bar-stack-field', w.stackField || '');
+        updateStackFieldVisibility(w.chartSubType || 'bar');
         break;
       case 'pie_chart':
         setVal('p-pie-label', w.labelField || '');
@@ -509,9 +606,12 @@
         w.limit = parseInt(getVal('p-table-limit')) || 20;
         break;
       case 'bar_chart':
-        w.xField      = getVal('p-bar-x');
-        w.yField      = getVal('p-bar-y');
-        w.aggregation = getVal('p-bar-agg');
+        w.chartSubType = getVal('p-bar-subtype') || 'bar';
+        w.xField       = getVal('p-bar-x');
+        w.yField       = getVal('p-bar-y');
+        w.aggregation  = getVal('p-bar-agg');
+        w.stackField   = getVal('p-bar-stack-field') || '';
+        updateStackFieldVisibility(w.chartSubType);
         break;
       case 'pie_chart':
         w.labelField  = getVal('p-pie-label');
@@ -639,23 +739,86 @@
     if (!w.xField || !w.yField) {
       body.innerHTML = '<div class="wp-placeholder">X軸・Y軸を選択してください</div>'; return;
     }
-    var grouped = groupBy(records, w.xField, w.yField, w.aggregation);
-    var labels  = Object.keys(grouped).slice(0, 20);
-    var values  = labels.map(function(k) { return grouped[k]; });
     body.style.cssText = 'display:block;padding:8px;';
     body.innerHTML = '<canvas id="cv-' + w.id + '"></canvas>';
     if (chartObjs[w.id]) { chartObjs[w.id].destroy(); }
-    chartObjs[w.id] = new Chart(document.getElementById('cv-' + w.id), {
-      type: 'bar',
-      data: { labels: labels, datasets: [{
-        data: values, backgroundColor: 'rgba(0,102,204,0.7)',
-        borderColor: '#0066cc', borderWidth: 1
-      }]},
-      options: { responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false } },
-        scales: { x: { ticks: { maxRotation: 45 } } }
-      }
-    });
+    chartObjs[w.id] = new Chart(
+      document.getElementById('cv-' + w.id),
+      buildChartConfig(w, records)
+    );
+  }
+
+  function buildChartConfig(w, recs) {
+    var subType    = w.chartSubType || 'bar';
+    var isStacked  = subType === 'stacked_bar' || subType === 'stacked_horizontal';
+    var isHoriz    = subType === 'horizontal_bar' || subType === 'stacked_horizontal';
+    var isLine     = subType === 'line';
+    var chartType  = isLine ? 'line' : 'bar';
+
+    var PALETTE = [
+      'rgba(0,102,204,0.75)', 'rgba(220,80,60,0.75)', 'rgba(40,160,80,0.75)',
+      'rgba(255,160,0,0.75)', 'rgba(120,60,180,0.75)', 'rgba(0,180,200,0.75)',
+      'rgba(230,100,150,0.75)', 'rgba(80,140,60,0.75)'
+    ];
+
+    var datasets;
+    if (isStacked && w.stackField) {
+      // 積み上げ：stackField で分けてデータセットを複数生成
+      var xVals = [];
+      recs.forEach(function(r) {
+        var v = getFieldVal(r, w.xField) || '(空)';
+        if (xVals.indexOf(v) === -1) xVals.push(v);
+      });
+      xVals = xVals.slice(0, 20);
+      var stackGroups = {};
+      recs.forEach(function(r) {
+        var sk = getFieldVal(r, w.stackField) || '(空)';
+        if (!stackGroups[sk]) stackGroups[sk] = [];
+        stackGroups[sk].push(r);
+      });
+      var stackKeys = Object.keys(stackGroups).slice(0, 10);
+      datasets = stackKeys.map(function(sk, i) {
+        var values = xVals.map(function(xv) {
+          var sub = stackGroups[sk].filter(function(r) { return (getFieldVal(r, w.xField) || '(空)') === xv; });
+          return aggregate(sub, w.yField, w.aggregation);
+        });
+        return { label: sk, data: values, backgroundColor: PALETTE[i % PALETTE.length], borderWidth: 1 };
+      });
+    } else {
+      var grouped = groupBy(recs, w.xField, w.yField, w.aggregation);
+      xVals = Object.keys(grouped).slice(0, 20);
+      var values = xVals.map(function(k) { return grouped[k]; });
+      datasets = [{ data: values, backgroundColor: PALETTE[0], borderColor: PALETTE[0].replace('0.75', '1'), borderWidth: 1 }];
+    }
+
+    var options = {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: datasets.length > 1 } },
+      scales: {}
+    };
+    if (isHoriz) options.indexAxis = 'y';
+    if (isStacked) {
+      options.scales = {
+        x: { stacked: true, ticks: { maxRotation: 45 } },
+        y: { stacked: true }
+      };
+    } else if (!isHoriz) {
+      options.scales = { x: { ticks: { maxRotation: 45 } } };
+    }
+    if (isLine) {
+      datasets.forEach(function(ds) {
+        ds.tension = 0.3;
+        ds.fill    = false;
+        ds.pointRadius = 3;
+      });
+    }
+
+    return { type: chartType, data: { labels: xVals, datasets: datasets }, options: options };
+  }
+
+  function updateStackFieldVisibility(subType) {
+    var row = document.getElementById('p-bar-stack-field-row');
+    if (row) row.style.display = (subType === 'stacked_bar' || subType === 'stacked_horizontal') ? '' : 'none';
   }
 
   function renderPreviewPie(w, body) {
@@ -715,9 +878,13 @@
   function renderPreviewFilter(w, body) {
     var fieldLabel = '';
     fieldCache.forEach(function(f) { if (f.code === w.field) fieldLabel = f.label; });
+    var typeLabels = {
+      date_range: '日付範囲', dropdown: 'ドロップダウン', text: 'テキスト',
+      checkbox: 'チェックボックス', radio: 'ラジオボタン'
+    };
     body.style.cssText = 'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;';
     body.innerHTML =
-      '<div style="font-size:11px;color:#888">フィルタ: ' + escHtml(w.filterType || '') + '</div>' +
+      '<div style="font-size:11px;color:#888">フィルタ: ' + escHtml(typeLabels[w.filterType] || w.filterType || '') + '</div>' +
       '<div style="font-size:13px;font-weight:bold">' + escHtml(fieldLabel || w.field || '(フィールド未選択)') + '</div>';
   }
 
@@ -728,12 +895,13 @@
     var nums = fieldCache.filter(function(f) { return ['NUMBER','CALC','RECORD_NUMBER'].indexOf(f.type) !== -1; });
     var strs = fieldCache.filter(function(f) { return ['SINGLE_LINE_TEXT','DROP_DOWN','RADIO_BUTTON','STATUS'].indexOf(f.type) !== -1; });
 
-    fillSel('p-nc-field',     dedup(nums.concat(fieldCache)));
-    fillSel('p-bar-x',        dedup(strs.concat(fieldCache)));
-    fillSel('p-bar-y',        nums);
-    fillSel('p-pie-label',    dedup(strs.concat(fieldCache)));
-    fillSel('p-pie-value',    nums);
-    fillSel('p-filter-field', fieldCache);
+    fillSel('p-nc-field',        dedup(nums.concat(fieldCache)));
+    fillSel('p-bar-x',           dedup(strs.concat(fieldCache)));
+    fillSel('p-bar-y',           nums);
+    fillSel('p-bar-stack-field', dedup(strs.concat(fieldCache)));
+    fillSel('p-pie-label',       dedup(strs.concat(fieldCache)));
+    fillSel('p-pie-value',       nums);
+    fillSel('p-filter-field',    fieldCache);
 
     var box = document.getElementById('p-table-fields');
     if (box) {
@@ -784,11 +952,26 @@
     if (!token) { alert('APIトークンを入力してください'); return; }
     if (!appId) { alert('アプリIDを入力してください'); return; }
 
+    var licKey = getVal('license-key').trim();
+    var licResult = checkLicenseKey(licKey);
+    if (licResult !== 'ok') {
+      var msgs = {
+        empty:  'ライセンスキーを入力してください。',
+        format: 'ライセンスキーの形式が正しくありません。\n例: KDP-2026-0001-a3f2c891',
+        domain: 'このドメインでは使用できないライセンスキーです。\nご購入時のドメイン用のキーをご確認ください。'
+      };
+      alert(msgs[licResult] || 'ライセンスキーが無効です。');
+      return;
+    }
     var settings = {
-      apiToken:   token,
-      appId:      appId,
-      targetView: getVal('target-view'),
-      widgets:    widgets
+      licenseKey:       licKey,
+      apiToken:         token,
+      appId:            appId,
+      targetView:       getVal('target-view'),
+      dashboardBgColor: getVal('dashboard-bg-color') || '#F3F4F6',
+      gridColumns:      GRID_COLS,
+      gridCellH:        CELL_H,
+      widgets:          widgets
     };
     kintone.plugin.app.setConfig({ settings: JSON.stringify(settings) }, function() {
       alert('設定を保存しました');

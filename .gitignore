@@ -1,6 +1,9 @@
 # Plugin private keys - NEVER commit
 *.ppk
 
+# License tool (internal only - DO NOT distribute)
+tools/generate_license.html
+
 # Build artifacts
 dist/*.zip
 

@@ -1,218 +1,285 @@
-/* ダッシュボード全体 */
+/* ==============================================
+   kintone Dashboard Plugin  /  desktop styles
+   ============================================== */
+* { box-sizing: border-box; }
+
+/* ---- ダッシュボード全体 ---- */
 #kintone-dashboard {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Meiryo, sans-serif;
-  font-size: 14px;
-  color: #333;
-  background: #f0f2f5;
-  padding: 16px;
-  margin-bottom: 16px;
-  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", Meiryo, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: #111827;
+  background: var(--db-bg, #F3F4F6);
+  padding: 16px 20px 24px;
+  min-height: 120px;
 }
 
-/* ツールバー */
+/* ---- ツールバー ---- */
 #dashboard-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
-#dashboard-toolbar .toolbar-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #0066cc;
+.toolbar-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E40AF;
   margin-right: auto;
+  letter-spacing: 0.2px;
 }
 
 .db-btn {
   padding: 6px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
-  transition: opacity 0.2s;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: opacity 0.15s, transform 0.1s;
 }
+.db-btn:hover  { opacity: 0.85; }
+.db-btn:active { transform: scale(0.97); }
+.db-btn-primary   { background: #1E40AF; color: #fff; }
+.db-btn-secondary { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+.db-btn-success   { background: #059669; color: #fff; }
 
-.db-btn:hover { opacity: 0.85; }
-
-.db-btn-primary   { background: #0066cc; color: #fff; }
-.db-btn-secondary { background: #e0e0e0; color: #333; }
-.db-btn-success   { background: #2d7a3a; color: #fff; }
-
-/* フィルタエリア */
+/* ---- フィルタエリア ---- */
 #dashboard-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 12px 16px;
+  gap: 10px 20px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  padding: 12px 18px;
   background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border-radius: 10px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-
 #dashboard-filters.hidden { display: none; }
 
 .filter-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
 }
-
-.filter-item label {
-  font-weight: 500;
-  white-space: nowrap;
+.filter-item > label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
-
 .filter-item input,
 .filter-item select {
-  padding: 5px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
   font-size: 13px;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.15s;
 }
-
-/* gridstack ウィジェットベース上書き */
-.grid-stack {
-  background: transparent;
+.filter-item input:focus,
+.filter-item select:focus {
+  outline: none;
+  border-color: #1E40AF;
+  box-shadow: 0 0 0 2px rgba(30,64,175,0.12);
 }
+.filter-check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  align-items: center;
+  padding: 2px 0;
+}
+.filter-check-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.filter-check-label input { cursor: pointer; accent-color: #1E40AF; }
 
-/* 装飾ウィジェット（図形・テキスト）は通常ウィジェットの背面に */
-.grid-stack-item.is-decoration { z-index: 1; }
+/* ---- gridstack ---- */
+.grid-stack { background: transparent; }
+
+/* 装飾ウィジェット（図形・テキスト）は背面 */
+.grid-stack-item.is-decoration       { z-index: 1; }
 .grid-stack-item:not(.is-decoration) { z-index: 2; }
 
+/* 丸/図形の白枠バグ修正 */
+.grid-stack-item.is-decoration .grid-stack-item-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+.grid-stack-item.is-decoration .widget-body {
+  background: transparent;
+  padding: 0;
+}
+
+/* ---- データウィジェットカード ---- */
 .grid-stack-item-content {
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
 /* ウィジェットヘッダー */
 .widget-header {
-  padding: 12px 16px 8px;
-  border-bottom: 1px solid #f0f0f0;
-  font-weight: bold;
-  font-size: 13px;
-  color: #555;
-  background: #fafafa;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #F3F4F6;
+  font-weight: 600;
+  font-size: 12px;
+  color: #374151;
+  background: #FAFAFA;
   display: flex;
   align-items: center;
   gap: 8px;
   user-select: none;
+  letter-spacing: 0.2px;
+  flex-shrink: 0;
 }
-
-.widget-header .widget-type-badge {
-  font-size: 11px;
-  padding: 2px 6px;
+.widget-type-badge {
+  font-size: 10px;
+  padding: 2px 7px;
   border-radius: 10px;
-  background: #e8f0fe;
-  color: #0066cc;
+  background: #EFF6FF;
+  color: #1E40AF;
   margin-left: auto;
+  font-weight: 500;
 }
 
 /* ウィジェット本体 */
 .widget-body {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   overflow: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 0;
 }
 
-/* 数値カード */
+/* ---- 数値カード ---- */
 .number-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   text-align: center;
+  padding: 8px;
+}
+.number-value {
+  font-size: 46px;
+  font-weight: 800;
+  color: #1E40AF;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.number-unit {
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
-.number-card .number-value {
-  font-size: 42px;
-  font-weight: bold;
-  color: #0066cc;
-  line-height: 1.2;
-}
-
-.number-card .number-unit {
-  font-size: 16px;
-  color: #888;
-  margin-top: 4px;
-}
-
-/* テーブル */
+/* ---- テーブル ---- */
 .dashboard-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
-
 .dashboard-table th {
-  background: #f0f4ff;
-  padding: 8px 10px;
+  background: #F9FAFB;
+  padding: 8px 12px;
   text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid #c8d8ff;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6B7280;
+  border-bottom: 2px solid #E5E7EB;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
 }
-
 .dashboard-table td {
-  padding: 7px 10px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 12px;
+  border-bottom: 1px solid #F3F4F6;
+  color: #374151;
 }
+.dashboard-table tbody tr:last-child td { border-bottom: none; }
+.dashboard-table tbody tr:hover td { background: #F9FAFB; }
 
-.dashboard-table tr:hover td {
-  background: #f8f9ff;
-}
-
-/* グラフ */
-.chart-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-/* ローディング・エラー */
-.widget-loading,
-.widget-error,
-.widget-no-data {
+/* ---- ローディング / エラー ---- */
+.widget-loading, .widget-no-data {
   text-align: center;
-  color: #999;
+  color: #9CA3AF;
   font-size: 13px;
-  padding: 20px;
+  padding: 24px;
+  width: 100%;
+}
+.widget-error {
+  text-align: center;
+  color: #DC2626;
+  font-size: 12px;
+  padding: 16px;
+  width: 100%;
 }
 
-.widget-error { color: #cc0000; }
-
-/* テキストボックス・図形のドラッグハンドル（編集モードのみ表示） */
+/* ---- ドラッグハンドル（編集モードのみ表示） ---- */
 .widget-drag-handle {
   display: none;
   position: absolute;
   top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,102,204,0.8);
+  background: rgba(30,64,175,0.88);
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   padding: 2px 10px;
   border-radius: 4px;
   cursor: move;
-  z-index: 10;
+  z-index: 20;
   user-select: none;
   white-space: nowrap;
 }
 
-/* 編集モード */
-#kintone-dashboard.edit-mode .grid-stack-item-content {
-  border: 2px dashed #0066cc;
+/* ---- 編集モード ---- */
+#kintone-dashboard.edit-mode .grid-stack-item:not(.is-decoration) .grid-stack-item-content {
+  border: 2px dashed #3B82F6 !important;
   cursor: move;
-  position: relative;
 }
-#kintone-dashboard.edit-mode .widget-header {
-  background: #e8f0fe;
+#kintone-dashboard.edit-mode .grid-stack-item.is-decoration .grid-stack-item-content {
+  outline: 2px dashed rgba(59,130,246,0.5) !important;
 }
-#kintone-dashboard.edit-mode .widget-drag-handle {
-  display: block;
+#kintone-dashboard.edit-mode .widget-header { background: #EFF6FF; }
+#kintone-dashboard.edit-mode .widget-drag-handle { display: block; }
+
+/* ---- ライセンスエラーバナー ---- */
+.db-license-error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  padding: 14px 20px;
+  color: #DC2626;
+  font-size: 13px;
+  text-align: center;
+  margin: 12px 0;
 }
