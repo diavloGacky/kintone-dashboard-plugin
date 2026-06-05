@@ -24,6 +24,20 @@
       <div id="field-load-status" class="status-message"></div>
     </section>
 
+    <!-- 表示ビュー設定 -->
+    <section class="config-section">
+      <h3>表示するビュー</h3>
+      <p class="section-desc">ダッシュボードを表示するビュー（タブ）を選択してください。<br>未選択の場合はすべての一覧ビューに表示されます。</p>
+      <div class="form-row">
+        <label for="target-view">表示ビュー</label>
+        <select id="target-view">
+          <option value="">すべての一覧に表示</option>
+        </select>
+        <button id="load-views-btn" class="btn btn-secondary">ビューを読み込む</button>
+      </div>
+      <div id="view-load-status" class="status-message"></div>
+    </section>
+
     <!-- ウィジェット一覧 -->
     <section class="config-section">
       <h3>ウィジェット一覧</h3>

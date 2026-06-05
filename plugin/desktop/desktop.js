@@ -25,6 +25,9 @@
 
     if (!settings.widgets || settings.widgets.length === 0) return;
 
+    // 表示ビューのフィルタ
+    if (settings.targetView && event.viewName !== settings.targetView) return;
+
     // ダッシュボードDOM構築
     buildDashboardDOM();
 

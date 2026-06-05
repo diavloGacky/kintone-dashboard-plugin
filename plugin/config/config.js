@@ -22,8 +22,9 @@
     if (config.settings) {
       try {
         var settings = JSON.parse(config.settings);
-        document.getElementById('api-token').value = settings.apiToken || '';
-        document.getElementById('app-id').value    = settings.appId   || '';
+        document.getElementById('api-token').value  = settings.apiToken   || '';
+        document.getElementById('app-id').value     = settings.appId      || '';
+        document.getElementById('target-view').value = settings.targetView || '';
         widgets = settings.widgets || [];
         renderWidgetList();
       } catch (e) {
@@ -36,6 +37,7 @@
   // ---- イベントバインド ----
   function bindEvents() {
     document.getElementById('load-fields-btn').addEventListener('click', loadFields);
+    document.getElementById('load-views-btn').addEventListener('click', loadViews);
     document.getElementById('add-widget-btn').addEventListener('click', openAddModal);
     document.getElementById('modal-save-btn').addEventListener('click', saveWidget);
     document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
@@ -44,6 +46,29 @@
       history.back();
     });
     document.getElementById('widget-type').addEventListener('change', onWidgetTypeChange);
+  }
+
+  // ---- ビュー読み込み ----
+  function loadViews() {
+    var appId    = document.getElementById('app-id').value.trim();
+    var statusEl = document.getElementById('view-load-status');
+    if (!appId) { showStatus(statusEl, 'アプリIDを入力してください', 'error'); return; }
+
+    showStatus(statusEl, '読み込み中...', '');
+    kintone.api(kintone.api.url('/k/v1/app/views', true), 'GET', { app: appId }, function(resp) {
+      var sel = document.getElementById('target-view');
+      var cur = sel.value;
+      sel.innerHTML = '<option value="">すべての一覧に表示</option>';
+      Object.keys(resp.views).forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      if (cur) sel.value = cur;
+      showStatus(statusEl, 'ビューを ' + Object.keys(resp.views).length + ' 件読み込みました', 'success');
+    }, function(err) {
+      showStatus(statusEl, 'ビューの読み込みに失敗しました: ' + (err.message || ''), 'error');
+    });
   }
 
   // ---- フィールド読み込み ----
@@ -298,9 +323,10 @@
     if (!appId) { alert('対象アプリIDを入力してください'); return; }
 
     var settings = {
-      apiToken: token,
-      appId:    appId,
-      widgets:  widgets
+      apiToken:   token,
+      appId:      appId,
+      targetView: document.getElementById('target-view').value,
+      widgets:    widgets
     };
 
     kintone.plugin.app.setConfig({ settings: JSON.stringify(settings) }, function() {
