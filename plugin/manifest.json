@@ -25,9 +25,12 @@
   "config": {
     "html": "config/config.html",
     "js": [
+      "lib/gridstack.js",
+      "lib/chart.min.js",
       "config/config.js"
     ],
     "css": [
+      "lib/gridstack.css",
       "config/config.css"
     ]
   }
