@@ -56,6 +56,14 @@
           <span class="pi-icon">🔍</span>
           <span class="pi-label">フィルタ</span>
         </div>
+        <div class="palette-item" data-type="text_box">
+          <span class="pi-icon">📝</span>
+          <span class="pi-label">テキスト</span>
+        </div>
+        <div class="palette-item" data-type="shape">
+          <span class="pi-icon">⬜</span>
+          <span class="pi-label">図形</span>
+        </div>
       </div>
       <div class="palette-sep"></div>
       <div class="palette-tip">
@@ -173,6 +181,96 @@
           <div class="prop-row">
             <label>対象フィールド</label>
             <select id="p-filter-field"><option value="">選択してください</option></select>
+          </div>
+        </div>
+
+        <!-- テキストボックス -->
+        <div class="prop-section" id="ps-text_box">
+          <div class="prop-row">
+            <label>テキスト内容</label>
+            <textarea id="p-tb-content" rows="4" placeholder="表示するテキストを入力"></textarea>
+          </div>
+          <div class="prop-row">
+            <label>文字サイズ</label>
+            <select id="p-tb-size">
+              <option value="12">小 (12px)</option>
+              <option value="14" selected>標準 (14px)</option>
+              <option value="18">大 (18px)</option>
+              <option value="24">特大 (24px)</option>
+              <option value="32">見出し (32px)</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label>文字色</label>
+            <input type="color" id="p-tb-color" value="#333333">
+          </div>
+          <div class="prop-row">
+            <label>背景色</label>
+            <input type="color" id="p-tb-bgcolor" value="#ffffff">
+          </div>
+          <div class="prop-row">
+            <label>テキスト揃え</label>
+            <select id="p-tb-align">
+              <option value="left">左揃え</option>
+              <option value="center">中央揃え</option>
+              <option value="right">右揃え</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label>太字</label>
+            <select id="p-tb-bold">
+              <option value="0">なし</option>
+              <option value="1">太字</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 図形 -->
+        <div class="prop-section" id="ps-shape">
+          <div class="prop-row">
+            <label>図形の種類</label>
+            <select id="p-sh-type">
+              <option value="rectangle">四角形</option>
+              <option value="circle">円</option>
+              <option value="line">ライン</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label>塗りつぶし色</label>
+            <input type="color" id="p-sh-fill" value="#0066cc">
+          </div>
+          <div class="prop-row">
+            <label>枠線の色</label>
+            <input type="color" id="p-sh-border" value="#0066cc">
+          </div>
+          <div class="prop-row">
+            <label>枠線の太さ</label>
+            <select id="p-sh-bwidth">
+              <option value="0">なし</option>
+              <option value="1">細 (1px)</option>
+              <option value="2">標準 (2px)</option>
+              <option value="4">太 (4px)</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label>角丸（四角形）</label>
+            <select id="p-sh-radius">
+              <option value="0">なし</option>
+              <option value="4">小 (4px)</option>
+              <option value="8">中 (8px)</option>
+              <option value="16">大 (16px)</option>
+              <option value="999">最大</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label>透明度</label>
+            <select id="p-sh-opacity">
+              <option value="1">100%</option>
+              <option value="0.8">80%</option>
+              <option value="0.6">60%</option>
+              <option value="0.4">40%</option>
+              <option value="0.2">20%</option>
+            </select>
           </div>
         </div>
 

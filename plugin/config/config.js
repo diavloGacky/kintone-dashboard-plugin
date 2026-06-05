@@ -8,7 +8,9 @@
     table:       { label: 'テーブル',   icon: '📋' },
     bar_chart:   { label: '棒グラフ',   icon: '📊' },
     pie_chart:   { label: '円グラフ',   icon: '🥧' },
-    filter:      { label: 'フィルタ',   icon: '🔍' }
+    filter:      { label: 'フィルタ',   icon: '🔍' },
+    text_box:    { label: 'テキスト',   icon: '📝' },
+    shape:       { label: '図形',       icon: '⬜' }
   };
 
   var widgets     = [];      // 配置済みウィジェット配列
@@ -175,6 +177,8 @@
     if (type === 'bar_chart')   { w.xField = ''; w.yField = ''; w.aggregation = 'SUM'; }
     if (type === 'pie_chart')   { w.labelField = ''; w.valueField = ''; w.aggregation = 'SUM'; }
     if (type === 'filter')      { w.filterType = 'date_range'; w.field = ''; }
+    if (type === 'text_box')    { w.content = 'テキストを入力'; w.fontSize = 14; w.textColor = '#333333'; w.bgColor = '#ffffff'; w.textAlign = 'left'; w.bold = false; }
+    if (type === 'shape')       { w.shapeType = 'rectangle'; w.fillColor = '#0066cc'; w.borderColor = '#0066cc'; w.borderWidth = 0; w.borderRadius = 0; w.opacity = 1; }
     widgets.push(w);
     addWidgetToCanvas(w, true);
     hideEmpty();
@@ -281,6 +285,23 @@
         setVal('p-filter-type',  w.filterType || 'date_range');
         setVal('p-filter-field', w.field || '');
         break;
+      case 'text_box':
+        var tbContent = document.getElementById('p-tb-content');
+        if (tbContent) tbContent.value = w.content || '';
+        setVal('p-tb-size',    w.fontSize  || 14);
+        setVal('p-tb-color',   w.textColor || '#333333');
+        setVal('p-tb-bgcolor', w.bgColor   || '#ffffff');
+        setVal('p-tb-align',   w.textAlign || 'left');
+        setVal('p-tb-bold',    w.bold ? '1' : '0');
+        break;
+      case 'shape':
+        setVal('p-sh-type',    w.shapeType    || 'rectangle');
+        setVal('p-sh-fill',    w.fillColor    || '#0066cc');
+        setVal('p-sh-border',  w.borderColor  || '#0066cc');
+        setVal('p-sh-bwidth',  w.borderWidth  || 0);
+        setVal('p-sh-radius',  w.borderRadius || 0);
+        setVal('p-sh-opacity', w.opacity !== undefined ? w.opacity : 1);
+        break;
     }
   }
 
@@ -329,6 +350,23 @@
         w.filterType = getVal('p-filter-type');
         w.field      = getVal('p-filter-field');
         break;
+      case 'text_box':
+        var tbEl = document.getElementById('p-tb-content');
+        w.content   = tbEl ? tbEl.value : '';
+        w.fontSize  = parseInt(getVal('p-tb-size'))  || 14;
+        w.textColor = getVal('p-tb-color')  || '#333333';
+        w.bgColor   = getVal('p-tb-bgcolor') || '#ffffff';
+        w.textAlign = getVal('p-tb-align')  || 'left';
+        w.bold      = getVal('p-tb-bold') === '1';
+        break;
+      case 'shape':
+        w.shapeType    = getVal('p-sh-type');
+        w.fillColor    = getVal('p-sh-fill');
+        w.borderColor  = getVal('p-sh-border');
+        w.borderWidth  = parseInt(getVal('p-sh-bwidth'))  || 0;
+        w.borderRadius = parseInt(getVal('p-sh-radius'))  || 0;
+        w.opacity      = parseFloat(getVal('p-sh-opacity'));
+        break;
     }
     renderWidgetPreview(w);
   }
@@ -371,7 +409,9 @@
         case 'table':       renderPreviewTable(w, body);   break;
         case 'bar_chart':   renderPreviewBar(w, body);     break;
         case 'pie_chart':   renderPreviewPie(w, body);     break;
-        case 'filter':      renderPreviewFilter(w, body);  break;
+        case 'filter':      renderPreviewFilter(w, body);   break;
+      case 'text_box':    renderPreviewTextBox(w, body);  break;
+      case 'shape':       renderPreviewShape(w, body);    break;
         default: body.innerHTML = '<div class="wp-placeholder">未対応</div>';
       }
     } catch(e) {
@@ -462,6 +502,39 @@
         plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } }
       }
     });
+  }
+
+  function renderPreviewTextBox(w, body) {
+    body.style.cssText = 'display:block;overflow:auto;padding:0;';
+    var d = document.createElement('div');
+    d.style.cssText = [
+      'width:100%', 'height:100%', 'padding:12px',
+      'font-size:' + (w.fontSize || 14) + 'px',
+      'color:' + (w.textColor || '#333'),
+      'background:' + (w.bgColor || 'transparent'),
+      'text-align:' + (w.textAlign || 'left'),
+      w.bold ? 'font-weight:bold' : '',
+      'line-height:1.7', 'white-space:pre-wrap', 'word-break:break-word'
+    ].filter(Boolean).join(';');
+    d.textContent = w.content || '（テキスト未入力）';
+    body.appendChild(d);
+  }
+
+  function renderPreviewShape(w, body) {
+    body.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;';
+    var d = document.createElement('div');
+    var r = w.shapeType === 'circle' ? '50%'
+          : w.shapeType === 'line'   ? '0'
+          : (w.borderRadius || 0) + 'px';
+    var h = w.shapeType === 'line' ? (w.lineHeight || 4) + 'px' : '100%';
+    d.style.cssText = [
+      'width:100%', 'height:' + h,
+      'background:' + (w.fillColor || '#0066cc'),
+      'border-radius:' + r,
+      'border:' + (w.borderWidth || 0) + 'px solid ' + (w.borderColor || 'transparent'),
+      'opacity:' + (w.opacity !== undefined ? w.opacity : 1)
+    ].join(';');
+    body.appendChild(d);
   }
 
   function renderPreviewFilter(w, body) {

@@ -215,12 +215,13 @@
 
   // ---- 全ウィジェット描画 ----
   function renderAllWidgets() {
-    var gridEl = document.getElementById('dashboard-grid');
-    gridEl.innerHTML = '';
+    gridObj.removeAll(true);
     chartObjs = {};
 
+    var gridEl = document.getElementById('dashboard-grid');
+
     settings.widgets.forEach(function(w, i) {
-      if (w.type === 'filter') return; // フィルタはフィルタエリアに表示
+      if (w.type === 'filter') return;
 
       var layout = w.layout || getDefaultLayout(i);
       var itemEl = document.createElement('div');
@@ -230,30 +231,20 @@
       itemEl.setAttribute('gs-w',  layout.w);
       itemEl.setAttribute('gs-h',  layout.h);
       itemEl.setAttribute('gs-id', String(i));
+      itemEl.innerHTML =
+        '<div class="grid-stack-item-content">' +
+          renderWidgetHeader(w) +
+          '<div class="widget-body" id="widget-body-' + i + '"></div>' +
+        '</div>';
 
-      var contentEl = document.createElement('div');
-      contentEl.className = 'grid-stack-item-content';
-      contentEl.innerHTML = renderWidgetHeader(w) + '<div class="widget-body" id="widget-body-' + i + '"></div>';
-      itemEl.appendChild(contentEl);
       gridEl.appendChild(itemEl);
+      gridObj.makeWidget(itemEl);
     });
-
-    gridObj.load(getGridItems());
 
     settings.widgets.forEach(function(w, i) {
       if (w.type === 'filter') return;
       renderWidgetContent(w, i, records);
     });
-  }
-
-  function getGridItems() {
-    var items = [];
-    settings.widgets.forEach(function(w, i) {
-      if (w.type === 'filter') return;
-      var layout = w.layout || getDefaultLayout(i);
-      items.push({ id: String(i), x: layout.x, y: layout.y, w: layout.w, h: layout.h });
-    });
-    return items;
   }
 
   function getDefaultLayout(index) {
@@ -290,6 +281,8 @@
                             body.appendChild(renderTable(widget, recs));       break;
         case 'bar_chart':   renderBarChart(widget, id, body, recs);           break;
         case 'pie_chart':   renderPieChart(widget, id, body, recs);           break;
+        case 'text_box':    renderTextBox(widget, body);                      break;
+        case 'shape':       renderShape(widget, body);                        break;
         default:            body.innerHTML = '<div class="widget-no-data">未対応のウィジェット種別</div>';
       }
     } catch(e) {
@@ -341,6 +334,41 @@
     });
     table.appendChild(tbody);
     return table;
+  }
+
+  // ---- テキストボックス ----
+  function renderTextBox(widget, body) {
+    body.style.cssText = 'display:block;overflow:auto;padding:0;';
+    var d = document.createElement('div');
+    d.style.cssText = [
+      'width:100%', 'height:100%', 'padding:12px',
+      'font-size:' + (widget.fontSize || 14) + 'px',
+      'color:' + (widget.textColor || '#333'),
+      'background:' + (widget.bgColor || 'transparent'),
+      'text-align:' + (widget.textAlign || 'left'),
+      widget.bold ? 'font-weight:bold' : '',
+      'line-height:1.7', 'white-space:pre-wrap', 'word-break:break-word'
+    ].filter(Boolean).join(';');
+    d.textContent = widget.content || '';
+    body.appendChild(d);
+  }
+
+  // ---- 図形 ----
+  function renderShape(widget, body) {
+    body.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;';
+    var d = document.createElement('div');
+    var r = widget.shapeType === 'circle' ? '50%'
+          : widget.shapeType === 'line'   ? '0'
+          : (widget.borderRadius || 0) + 'px';
+    var h = widget.shapeType === 'line' ? (widget.lineHeight || 4) + 'px' : '100%';
+    d.style.cssText = [
+      'width:100%', 'height:' + h,
+      'background:' + (widget.fillColor || '#0066cc'),
+      'border-radius:' + r,
+      'border:' + (widget.borderWidth || 0) + 'px solid ' + (widget.borderColor || 'transparent'),
+      'opacity:' + (widget.opacity !== undefined ? widget.opacity : 1)
+    ].join(';');
+    body.appendChild(d);
   }
 
   // ---- 棒グラフ ----
