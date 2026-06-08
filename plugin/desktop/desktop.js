@@ -366,9 +366,14 @@
       itemEl.setAttribute('gs-id', String(i));
       var isDecoration = (w.type === 'text_box' || w.type === 'shape');
       if (isDecoration) itemEl.classList.add('is-decoration');
+      // ドラッグハンドルの表示要否を判定
+      // ・装飾ウィジェット（テキストボックス/図形）はヘッダーが無いため常に必要
+      // ・通常ウィジェットも「タイトルを非表示」設定だとヘッダー（ドラッグハンドル）が
+      //   消えて移動できなくなるため、その場合だけ代替の移動用ハンドルを表示する
+      var needsDragHandle = isDecoration || w.showTitle === false;
       itemEl.innerHTML =
         '<div class="grid-stack-item-content">' +
-          (isDecoration ? '<div class="widget-drag-handle">⠿</div>' : '') +
+          (needsDragHandle ? '<div class="widget-drag-handle">⠿</div>' : '') +
           renderWidgetHeader(w) +
           '<div class="widget-body" id="widget-body-' + i + '"></div>' +
         '</div>';
